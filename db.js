@@ -207,6 +207,12 @@ function createSale(saleData, tenantId = 'default') {
     return txn();
 }
 
+function getSaleById(saleId, tenantId = 'default') {
+    return getDb().prepare(
+        'SELECT * FROM sales WHERE id = ? AND tenant_id = ?'
+    ).get(saleId, tenantId) || null;
+}
+
 function cancelSale(saleId, reason, cancelledBy, tenantId = 'default') {
     const txn = getDb().transaction(() => {
         const sale = getDb().prepare(
@@ -673,6 +679,7 @@ module.exports = {
     getNextSaleSeq,
     createSale,
     cancelSale,
+    getSaleById,
     getAllSales,
     getSalesByShift,
 

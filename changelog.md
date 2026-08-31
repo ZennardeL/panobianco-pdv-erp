@@ -4,6 +4,26 @@ Todas as alterações relevantes do projeto serão documentadas aqui.
 
 ---
 
+## [2.5.0] — 2026-08-31
+
+### Cancelamento Imediato de Venda pelo Operador
+
+**Motivação:** Erros operacionais na recepção (produto errado, cliente desistiu) exigiam que o gestor (ADMIN) cancelasse a venda posteriormente. Agora o próprio operador pode cancelar imediatamente.
+
+### Adicionado
+- **Botão "❌ Cancelar Esta Venda"** no modal de confirmação (tela do comprovante V01, V02...)
+- **Self-cancel por operador** — o operador pode cancelar apenas a venda que **ele próprio** acabou de registrar
+- **Prompt de justificativa** obrigatório para auditoria
+- **Função `getSaleById()`** no `db.js` para verificação de propriedade da venda
+
+### Regras de Permissão
+- ADMIN cancela qualquer venda ✅
+- OPERADOR cancela **sua própria** venda via botão imediato ✅
+- OPERADOR **NÃO** pode cancelar venda de outro operador ❌ (403)
+- OPERADOR **NÃO** pode cancelar vendas pela aba Auditoria ❌ (403)
+
+---
+
 ## [2.4.0] — 2026-08-31
 
 ### Versionamento Git + Alertas de Estoque

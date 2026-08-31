@@ -273,26 +273,38 @@ const server = http.createServer(async (req, res) => {
             return sendJson(res, 200, { success: true, sale: formattedSale, state: db.getFullState() });
         }
 
-        // POST /api/sale/cancel — Cancelar venda (🔒 ADMIN)
+        // POST /api/sale/cancel — Cancelar venda (ADMIN qualquer | OPERADOR apenas a própria)
         if (pathname === '/api/sale/cancel' && req.method === 'POST') {
-            const session = requireAdmin(req, res);
+            const session = requireAuth(req, res);
             if (!session) return;
 
-            const { saleId, reason } = await parseRequestBody(req);
+            const { saleId, reason, immediateCancelByOperator } = await parseRequestBody(req);
 
             if (!reason) {
                 return sendJson(res, 400, { success: false, error: 'Justificativa obrigatória.' });
             }
 
-            const adminName = `${session.user_name} [${session.user_code.toUpperCase()}]`;
-            const cancelledByText = `Cancelado por ${adminName}: ${reason}`;
-            const result = db.cancelSale(saleId, cancelledByText, adminName);
+            // OPERADOR só pode cancelar se: flag imediato + venda é dele
+            if (session.user_role !== 'ADMIN') {
+                if (!immediateCancelByOperator) {
+                    return sendJson(res, 403, { success: false, error: 'Acesso restrito a gestores (ADMIN).' });
+                }
+                // Verificar se a venda pertence ao operador
+                const sale = db.getSaleById ? db.getSaleById(saleId) : null;
+                if (sale && sale.operator_id !== session.user_id) {
+                    return sendJson(res, 403, { success: false, error: 'Você só pode cancelar suas próprias vendas.' });
+                }
+            }
+
+            const operatorName = `${session.user_name} [${session.user_code.toUpperCase()}]`;
+            const cancelledByText = `Cancelado por ${operatorName}: ${reason}`;
+            const result = db.cancelSale(saleId, cancelledByText, operatorName);
 
             if (!result) {
                 return sendJson(res, 400, { success: false, error: 'Venda não encontrada ou já cancelada.' });
             }
 
-            db.logAudit('CANCELAMENTO', 'sale', saleId, session.user_id, adminName, cancelledByText);
+            db.logAudit('CANCELAMENTO', 'sale', saleId, session.user_id, operatorName, cancelledByText);
 
             return sendJson(res, 200, { success: true, state: db.getFullState() });
         }

@@ -548,6 +548,7 @@ class PanobiancoApp {
     }
 
     showSuccessModal(sale) {
+        this.lastSaleId = sale.id;
         document.getElementById('modal-sale-code').innerText = sale.id;
         document.getElementById('modal-code-text').innerText = sale.id;
 
@@ -570,6 +571,39 @@ class PanobiancoApp {
 
     closeSuccessModal() {
         document.getElementById('success-modal').classList.remove('active');
+    }
+
+    async cancelLastSale() {
+        if (!this.lastSaleId) return;
+
+        const reason = prompt(`⚠️ Cancelar venda ${this.lastSaleId}?\n\nDigite o motivo do cancelamento (ex: "erro de produto", "cliente desistiu"):`, 'Erro de operação — cancelamento imediato');
+        
+        if (!reason) return; // Cancelou o prompt
+
+        try {
+            const res = await this.authFetch(`${this.API_BASE}/api/sale/cancel`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    saleId: this.lastSaleId,
+                    reason: reason,
+                    immediateCancelByOperator: true
+                })
+            });
+
+            if (res.ok) {
+                alert(`✅ Venda ${this.lastSaleId} cancelada com sucesso!\nEstoque devolvido automaticamente.`);
+                this.lastSaleId = null;
+                this.closeSuccessModal();
+                await this.syncWithServer(false);
+            } else {
+                const data = await res.json();
+                alert(`❌ ${data.error || 'Erro ao cancelar.'}`);
+            }
+        } catch (e) {
+            if (e.message === 'Sem permissão') {
+                alert('❌ Você não tem permissão para cancelar vendas. Peça ao gestor.');
+            }
+        }
     }
 
     /* ==================== MÓDULO 2: ESTOQUE & CADASTRO DE FOTOS ==================== */
