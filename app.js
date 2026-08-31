@@ -1559,6 +1559,43 @@ class PanobiancoApp {
         this.renderAuditLogs();
         this.renderUsersTable();
         this.renderDashboard();
+        this.updateStockAlerts();
+    }
+
+    updateStockAlerts() {
+        const banner = document.getElementById('stock-alert-banner');
+        if (!banner) return;
+
+        const products = this.state.products || [];
+        const outOfStock = products.filter(p => p.stock <= 0);
+        const critical = products.filter(p => p.stock > 0 && p.stock <= p.minStock);
+
+        if (outOfStock.length === 0 && critical.length === 0) {
+            banner.style.display = 'none';
+            return;
+        }
+
+        banner.style.display = 'flex';
+        const titleEl = document.getElementById('stock-alert-title');
+        const detailEl = document.getElementById('stock-alert-detail');
+
+        const parts = [];
+        if (outOfStock.length > 0) {
+            const names = outOfStock.slice(0, 3).map(p => p.name).join(', ');
+            const extra = outOfStock.length > 3 ? ` e mais ${outOfStock.length - 3}` : '';
+            parts.push(`🔴 ${outOfStock.length} esgotado(s): ${names}${extra}`);
+        }
+        if (critical.length > 0) {
+            const names = critical.slice(0, 3).map(p => `${p.name} (${p.stock}un)`).join(', ');
+            const extra = critical.length > 3 ? ` e mais ${critical.length - 3}` : '';
+            parts.push(`🟡 ${critical.length} crítico(s): ${names}${extra}`);
+        }
+
+        if (titleEl) {
+            titleEl.textContent = outOfStock.length > 0 ? '⚠️ Atenção: Produtos Esgotados!' : '⚠️ Estoque Crítico';
+            titleEl.style.color = outOfStock.length > 0 ? '#dc2626' : '#d97706';
+        }
+        if (detailEl) detailEl.textContent = parts.join(' | ');
     }
 }
 

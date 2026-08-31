@@ -4,6 +4,23 @@ Todas as alterações relevantes do projeto serão documentadas aqui.
 
 ---
 
+## [2.4.0] — 2026-08-31
+
+### Versionamento Git + Alertas de Estoque
+
+### Adicionado
+- **Git Portable** instalado sem permissão de admin, adicionado ao PATH
+- **Primeiro commit** consolidado com tag `v2.3.0`
+- **Banner de Alerta de Estoque** — notificação visual persistente no topo da tela quando:
+  - 🔴 Produtos esgotados (stock = 0)
+  - 🟡 Produtos em nível crítico (stock ≤ minStock)
+- Banner clicável → navega para aba Estoque
+- Banner dismissível com botão ✕
+- Exibe nomes dos produtos afetados (até 3) com contagem total
+- Atualizado automaticamente a cada renderização (polling 2.5s)
+
+---
+
 ## [2.3.0] — 2026-08-28
 
 ### Dashboard Financeiro Avançado

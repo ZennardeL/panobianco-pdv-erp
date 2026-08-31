@@ -97,6 +97,16 @@
             </div>
         </header>
 
+        <!-- Banner de Alerta de Estoque -->
+        <div id="stock-alert-banner" style="display:none; background:linear-gradient(135deg,#fef2f2,#fff7ed); border:1px solid #fca5a5; border-radius:12px; padding:12px 20px; margin:0 16px 12px; display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="app.navigate('estoque')">
+            <span style="font-size:1.5em;">⚠️</span>
+            <div style="flex:1;">
+                <strong id="stock-alert-title" style="color:#dc2626;">Atenção: Estoque Crítico</strong>
+                <p id="stock-alert-detail" style="margin:2px 0 0; font-size:0.85em; color:#92400e;"></p>
+            </div>
+            <button onclick="event.stopPropagation(); document.getElementById('stock-alert-banner').style.display='none';" style="background:none;border:none;font-size:1.2em;cursor:pointer;color:#9ca3af;" title="Fechar">✕</button>
+        </div>
+
         <!-- ==================== VIEW 1: PDV FRENTE DE CAIXA ==================== -->
         <main id="view-pdv" class="view-content active">
             <div class="pdv-grid">
