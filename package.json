@@ -1,0 +1,26 @@
+{
+  "name": "panobianco-pdv-erp",
+  "version": "2.3.0",
+  "description": "PDV & Mini-ERP para academias — Controle de vendas, estoque, caixa e auditoria",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "migrate": "node migrate-from-json.js"
+  },
+  "keywords": [
+    "pdv",
+    "erp",
+    "academia",
+    "vendas",
+    "estoque"
+  ],
+  "author": "Luan",
+  "license": "UNLICENSED",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3"
+  }
+}
