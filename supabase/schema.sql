@@ -370,3 +370,40 @@ WITH CHECK (bucket_id = 'product-images');
 CREATE POLICY "Authenticated/Anon Update Access" 
 ON storage.objects FOR UPDATE 
 USING (bucket_id = 'product-images');
+
+-- ==========================================================================
+-- POLÍTICAS DE ACESSO (Row Level Security - RLS)
+-- Permite leitura e escrita para o PDV e sincronização Realtime
+-- ==========================================================================
+ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all on tenants" ON tenants;
+CREATE POLICY "Allow all on tenants" ON tenants FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all on users" ON users;
+CREATE POLICY "Allow all on users" ON users FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all on products" ON products;
+CREATE POLICY "Allow all on products" ON products FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE counters ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all on counters" ON counters;
+CREATE POLICY "Allow all on counters" ON counters FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE shifts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all on shifts" ON shifts;
+CREATE POLICY "Allow all on shifts" ON shifts FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all on sales" ON sales;
+CREATE POLICY "Allow all on sales" ON sales FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE sale_items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all on sale_items" ON sale_items;
+CREATE POLICY "Allow all on sale_items" ON sale_items FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all on audit_log" ON audit_log;
+CREATE POLICY "Allow all on audit_log" ON audit_log FOR ALL USING (true) WITH CHECK (true);
+
