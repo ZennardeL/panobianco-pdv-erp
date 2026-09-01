@@ -2,7 +2,6 @@
   "name": "panobianco-pdv-erp",
   "version": "3.0.0",
   "description": "PDV & Mini-ERP para academias — Controle de vendas, estoque, caixa e auditoria (Supabase Cloud + Realtime)",
-  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "migrate": "node migrate-from-json.js",
