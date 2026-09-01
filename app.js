@@ -9,6 +9,7 @@ class PanobiancoApp {
         this.STORAGE_KEY = 'panobianco_pos_erp_v5';
         this.API_BASE = window.location.origin.includes('http') ? window.location.origin : 'http://localhost:3000';
         this.isOnline = true;
+        this.useSupabase = false;
         this.state = this.loadLocalState();
         this.currentUser = null;
         this.authToken = sessionStorage.getItem('panobianco_token') || null;
@@ -23,23 +24,38 @@ class PanobiancoApp {
     }
 
     async init() {
-        // Tentar recuperar sessão existente
-        if (this.authToken) {
+        // 1. Tentar conectar ao Supabase Cloud (se configurado)
+        if (typeof supabaseAdapter !== 'undefined' && supabaseAdapter.init()) {
+            this.useSupabase = true;
+            console.log('⚡ Modo Supabase Cloud Realtime Ativado.');
+            await this.syncWithSupabase(false);
+            supabaseAdapter.subscribeRealtime((type, payload) => this.handleRealtimeUpdate(type, payload));
+            this.updateSyncBadge(true, true);
+        } else {
+            this.useSupabase = false;
+        }
+
+        // 2. Tentar recuperar sessão existente
+        const savedUser = sessionStorage.getItem('panobianco_user');
+        if (savedUser) {
+            try {
+                this.currentUser = JSON.parse(savedUser);
+                this.onLoginSuccess(this.currentUser);
+                this.renderAll();
+                if (!this.useSupabase) this.startPolling();
+                return;
+            } catch (e) { /* fallthrough para login */ }
+        }
+
+        if (this.authToken && !this.useSupabase) {
             const ok = await this.syncWithServer(false);
-            if (ok) {
-                // Sessão válida — recuperar dados do usuário do sessionStorage
-                const savedUser = sessionStorage.getItem('panobianco_user');
-                if (savedUser) {
-                    try {
-                        this.currentUser = JSON.parse(savedUser);
-                        this.onLoginSuccess(this.currentUser);
-                        this.renderAll();
-                        this.startPolling();
-                        return;
-                    } catch (e) { /* fallthrough para login */ }
-                }
+            if (ok && savedUser) {
+                this.currentUser = JSON.parse(savedUser);
+                this.onLoginSuccess(this.currentUser);
+                this.renderAll();
+                this.startPolling();
+                return;
             }
-            // Token inválido/expirado — limpar e mostrar login
             this.clearSession();
         }
 
@@ -49,9 +65,32 @@ class PanobiancoApp {
 
     startPolling() {
         if (this.syncInterval) clearInterval(this.syncInterval);
+        if (this.useSupabase) return; // Supabase usa WebSockets Realtime nativos!
         this.syncInterval = setInterval(() => {
             this.syncWithServer(false);
         }, 2500);
+    }
+
+    async syncWithSupabase(showFeedback = true) {
+        try {
+            const cloudState = await supabaseAdapter.getFullState();
+            this.state = cloudState;
+            this.saveLocalState(cloudState);
+            this.isOnline = true;
+            this.updateSyncBadge(true, true);
+            this.renderAll();
+            return true;
+        } catch (e) {
+            console.warn('⚠️ Falha ao sincronizar com Supabase Cloud:', e);
+            this.isOnline = false;
+            this.updateSyncBadge(false, true);
+            return false;
+        }
+    }
+
+    handleRealtimeUpdate(type, payload) {
+        console.log(`⚡ [Realtime Push Recebido: ${type}] Atualizando tela instantaneamente...`);
+        this.syncWithSupabase(false);
     }
 
     /**
@@ -69,7 +108,6 @@ class PanobiancoApp {
         const res = await fetch(url, options);
 
         if (res.status === 401) {
-            // Sessão expirada — forçar relogin
             this.clearSession();
             this.showLoginModal();
             throw new Error('Sessão expirada. Faça login novamente.');
@@ -92,6 +130,7 @@ class PanobiancoApp {
     }
 
     async syncWithServer(showFeedback = true) {
+        if (this.useSupabase) return this.syncWithSupabase(showFeedback);
         try {
             const headers = { 'Cache-Control': 'no-store' };
             if (this.authToken) {
@@ -99,7 +138,6 @@ class PanobiancoApp {
             }
             const res = await fetch(`${this.API_BASE}/api/state`, { headers });
             if (res.status === 401) {
-                // Token expirado durante polling — forçar relogin silenciosamente
                 this.clearSession();
                 this.showLoginModal();
                 return false;
@@ -109,7 +147,7 @@ class PanobiancoApp {
                 this.state = serverState;
                 this.saveLocalState(serverState);
                 this.isOnline = true;
-                this.updateSyncBadge(true);
+                this.updateSyncBadge(true, false);
                 this.renderAll();
                 return true;
             } else {
@@ -117,23 +155,35 @@ class PanobiancoApp {
             }
         } catch (e) {
             this.isOnline = false;
-            this.updateSyncBadge(false);
+            this.updateSyncBadge(false, false);
             if (showFeedback) console.warn('Modo Offline: Operando com dados locais.');
             return false;
         }
     }
 
-    updateSyncBadge(online) {
+    updateSyncBadge(online, isSupabase = this.useSupabase) {
         let badge = document.getElementById('sync-status-badge');
         if (badge) {
-            if (online) {
-                badge.innerHTML = '🟢 PC Recepção 24h Ativo';
-                badge.className = 'sync-badge online';
-                badge.title = 'Conectado e sincronizado com o PC da Recepção 24h';
+            if (isSupabase) {
+                if (online) {
+                    badge.innerHTML = '⚡ Supabase Cloud Realtime';
+                    badge.className = 'sync-badge online';
+                    badge.title = 'Conectado em tempo real com o Supabase Cloud (WebSockets ativos)';
+                } else {
+                    badge.innerHTML = '🟡 Supabase Reconectando...';
+                    badge.className = 'sync-badge offline';
+                    badge.title = 'Tentando reconectar com a nuvem Supabase.';
+                }
             } else {
-                badge.innerHTML = '🟡 Modo Local';
-                badge.className = 'sync-badge offline';
-                badge.title = 'Operando localmente. Sincronizará com o PC 24h.';
+                if (online) {
+                    badge.innerHTML = '🟢 PC Recepção 24h';
+                    badge.className = 'sync-badge online';
+                    badge.title = 'Conectado e sincronizado com o PC da Recepção 24h';
+                } else {
+                    badge.innerHTML = '🟡 Modo Local';
+                    badge.className = 'sync-badge offline';
+                    badge.title = 'Operando localmente. Sincronizará com o PC 24h.';
+                }
             }
         }
     }
@@ -194,6 +244,21 @@ class PanobiancoApp {
             errorEl.innerText = '⚠️ Digite seu código de funcionário para entrar.';
             errorEl.style.display = 'block';
             return;
+        }
+
+        if (this.useSupabase) {
+            const user = (this.state.users || []).find(u => u.code.toLowerCase() === codeInput);
+            if (user && user.active !== false) {
+                this.currentUser = user;
+                sessionStorage.setItem('panobianco_user', JSON.stringify(user));
+                this.onLoginSuccess(user);
+                await this.syncWithSupabase(false);
+                return;
+            } else {
+                errorEl.innerText = '❌ Código de colaborador não encontrado no sistema!';
+                errorEl.style.display = 'block';
+                return;
+            }
         }
 
         try {
@@ -498,6 +563,25 @@ class PanobiancoApp {
             operatorCode: opCode
         };
 
+        if (this.useSupabase) {
+            try {
+                const result = await supabaseAdapter.processSale(salePayload);
+                if (result && result.success) {
+                    this.showSuccessModal(result.sale);
+                    this.cart = [];
+                    this.renderCart();
+                    await this.syncWithSupabase(false);
+                    return;
+                } else {
+                    throw new Error(result?.error || 'Erro ao processar venda no Supabase.');
+                }
+            } catch (err) {
+                console.error('❌ Erro na venda Supabase:', err);
+                alert(`❌ Erro ao finalizar venda: ${err.message || err}`);
+                return;
+            }
+        }
+
         try {
             const res = await fetch(`${this.API_BASE}/api/sale`, {
                 method: 'POST',
@@ -553,17 +637,17 @@ class PanobiancoApp {
         document.getElementById('modal-code-text').innerText = sale.id;
 
         const preview = document.getElementById('receipt-preview');
-        let itemsList = sale.items.map(it => `&bull; ${it.qty}x ${it.name} (R$ ${(it.price * it.qty).toFixed(2).replace('.', ',')})`).join('<br>');
+        let itemsList = (sale.items || []).map(it => `&bull; ${it.qty}x ${it.name} (R$ ${(it.price * it.qty).toFixed(2).replace('.', ',')})`).join('<br>');
         
         preview.innerHTML = `
             <strong>Comprovante da Lojinha (#${sale.id})</strong><br>
             ⏰ Horário: ${sale.dateFormatted || new Date().toLocaleTimeString('pt-BR')}<br>
             👤 <strong>Operador: ${sale.operatorName}</strong><br>
-            💳 Pagamento: <strong>${sale.paymentMethod.toUpperCase()}</strong><br>
+            💳 Pagamento: <strong>${(sale.paymentMethod || '').toUpperCase()}</strong><br>
             <hr style="margin: 6px 0; border: 0; border-top: 1px dashed #cbd5e1;">
             ${itemsList}<br>
             <hr style="margin: 6px 0; border: 0; border-top: 1px dashed #cbd5e1;">
-            <strong style="color: #0f172a; font-size: 11pt;">TOTAL: R$ ${sale.total.toFixed(2).replace('.', ',')}</strong>
+            <strong style="color: #0f172a; font-size: 11pt;">TOTAL: R$ ${Number(sale.total).toFixed(2).replace('.', ',')}</strong>
         `;
 
         document.getElementById('success-modal').classList.add('active');
@@ -578,7 +662,30 @@ class PanobiancoApp {
 
         const reason = prompt(`⚠️ Cancelar venda ${this.lastSaleId}?\n\nDigite o motivo do cancelamento (ex: "erro de produto", "cliente desistiu"):`, 'Erro de operação — cancelamento imediato');
         
-        if (!reason) return; // Cancelou o prompt
+        if (!reason) return;
+
+        if (this.useSupabase) {
+            try {
+                const opId = this.currentUser ? this.currentUser.id : 'f20729';
+                const opName = this.currentUser ? `${this.currentUser.name} [${this.currentUser.code.toUpperCase()}]` : 'Luan [F20729]';
+                const isAdmin = this.currentUser && this.currentUser.role === 'ADMIN';
+
+                const res = await supabaseAdapter.cancelSale(this.lastSaleId, opId, opName, reason, isAdmin);
+                if (res && res.success) {
+                    alert(`✅ Venda ${this.lastSaleId} cancelada com sucesso!\nEstoque devolvido no Supabase Cloud.`);
+                    this.lastSaleId = null;
+                    this.closeSuccessModal();
+                    await this.syncWithSupabase(false);
+                    return;
+                } else {
+                    throw new Error(res?.error || 'Erro ao cancelar venda.');
+                }
+            } catch (err) {
+                console.error('❌ Erro no cancelamento Supabase:', err);
+                alert(`❌ ${err.message || 'Erro ao cancelar.'}`);
+                return;
+            }
+        }
 
         try {
             const res = await this.authFetch(`${this.API_BASE}/api/sale/cancel`, {
@@ -741,6 +848,21 @@ class PanobiancoApp {
             return;
         }
 
+        if (this.useSupabase) {
+            try {
+                await supabaseAdapter.uploadProductPhoto(prodId, this.tempQuickPhotoBase64);
+                alert('✅ Foto cadastrada e salva na Nuvem Supabase com sucesso!');
+                await this.syncWithSupabase(false);
+                this.closeQuickPhotoModal();
+                this.renderAll();
+                return;
+            } catch (e) {
+                console.error('❌ Erro no upload de foto Supabase:', e);
+                alert(`❌ Erro ao salvar foto no Supabase: ${e.message}`);
+                return;
+            }
+        }
+
         try {
             const res = await fetch(`${this.API_BASE}/api/product/photo`, {
                 method: 'POST',
@@ -883,7 +1005,28 @@ class PanobiancoApp {
             return;
         }
 
-        const productPayload = { id, name, category, icon, cost, price, stock, minStock, image };
+        const prodId = id || ('prod_' + Date.now());
+        const productPayload = { id: prodId, name, category, icon, cost, price, stock, minStock, image };
+
+        if (this.useSupabase) {
+            try {
+                let imageUrl = image;
+                if (this.tempProductPhotoBase64 && this.tempProductPhotoBase64.startsWith('data:')) {
+                    imageUrl = await supabaseAdapter.uploadProductPhoto(prodId, this.tempProductPhotoBase64);
+                }
+                productPayload.image = imageUrl;
+                await supabaseAdapter.upsertProduct(productPayload);
+                alert('✅ Produto salvo com sucesso no Supabase Cloud!');
+                await this.syncWithSupabase(false);
+                this.closeProductModal();
+                this.renderAll();
+                return;
+            } catch (e) {
+                console.error('❌ Erro ao salvar produto no Supabase:', e);
+                alert(`❌ Erro ao salvar produto: ${e.message}`);
+                return;
+            }
+        }
 
         try {
             const res = await fetch(`${this.API_BASE}/api/product`, {
@@ -900,7 +1043,7 @@ class PanobiancoApp {
                 const prod = this.state.products.find(p => p.id === id);
                 if (prod) Object.assign(prod, productPayload);
             } else {
-                this.state.products.push({ id: 'prod_' + Date.now(), ...productPayload });
+                this.state.products.push(productPayload);
             }
         }
 
@@ -928,6 +1071,23 @@ class PanobiancoApp {
         if (qty <= 0) {
             alert('⚠️ Digite uma quantidade válida para adicionar.');
             return;
+        }
+
+        if (this.useSupabase) {
+            try {
+                const opId = this.currentUser ? this.currentUser.id : 'f20729';
+                const opName = this.currentUser ? `${this.currentUser.name} [${this.currentUser.code.toUpperCase()}]` : 'Luan [F20729]';
+                await supabaseAdapter.restockProduct(id, qty, opId, opName);
+                alert(`✅ Entrada de ${qty} unidades confirmada no Supabase Cloud!`);
+                await this.syncWithSupabase(false);
+                this.closeRestockModal();
+                this.renderAll();
+                return;
+            } catch (e) {
+                console.error('❌ Erro na reposição Supabase:', e);
+                alert(`❌ Erro na reposição: ${e.message}`);
+                return;
+            }
         }
 
         try {
@@ -1037,6 +1197,31 @@ class PanobiancoApp {
         const countedCash = parseFloat(document.getElementById('blind-cash-input').value) || 0;
         const opCode = this.currentUser ? this.currentUser.code.toUpperCase() : 'F20729';
         const opName = this.currentUser ? `${this.currentUser.name} [${opCode}]` : 'Luan [F20729]';
+
+        if (this.useSupabase) {
+            try {
+                const opId = this.currentUser ? this.currentUser.id : 'f20729';
+                const res = await supabaseAdapter.closeShift(countedCash, opId, opName);
+                const resultBox = document.getElementById('blind-result-box');
+                if (resultBox) {
+                    resultBox.style.display = 'block';
+                    const diff = res.diff;
+                    if (Math.abs(diff) < 0.05) {
+                        resultBox.className = 'reconcile-box match';
+                        resultBox.innerHTML = `✅ <strong>Turno Fechado e Conferido com Sucesso no Supabase Cloud!</strong><br>Operador: ${opName}<br>Dinheiro em Gaveta: R$ ${countedCash.toFixed(2).replace('.', ',')} (Divergência: R$ 0,00).`;
+                    } else {
+                        resultBox.className = 'reconcile-box diff';
+                        resultBox.innerHTML = `⚠️ <strong>Divergência Registrada no Fechamento:</strong><br>Operador: ${opName}<br>Diferença: ${diff > 0 ? '+R$ ' + diff.toFixed(2).replace('.', ',') + ' (Sobra)' : '-R$ ' + Math.abs(diff).toFixed(2).replace('.', ',') + ' (Falta)'}`;
+                    }
+                }
+                await this.syncWithSupabase(false);
+                return;
+            } catch (e) {
+                console.error('❌ Erro ao fechar turno no Supabase:', e);
+                alert(`❌ Erro ao fechar turno: ${e.message}`);
+                return;
+            }
+        }
 
         try {
             const res = await fetch(`${this.API_BASE}/api/shift/close`, {
@@ -1175,6 +1360,27 @@ class PanobiancoApp {
 
         const adminTitle = this.currentUser ? `${this.currentUser.name} [${this.currentUser.code.toUpperCase()}]` : 'Luan [F20729]';
 
+        if (this.useSupabase) {
+            try {
+                const opId = this.currentUser ? this.currentUser.id : 'f20729';
+                const isAdmin = this.currentUser && this.currentUser.role === 'ADMIN';
+                const res = await supabaseAdapter.cancelSale(saleId, opId, adminTitle, reason, isAdmin);
+                if (res && res.success) {
+                    alert(`✅ Venda ${saleId} cancelada e itens devolvidos ao estoque no Supabase Cloud!`);
+                    await this.syncWithSupabase(false);
+                    this.closeCancelModal();
+                    this.renderAll();
+                    return;
+                } else {
+                    throw new Error(res?.error || 'Erro ao cancelar venda.');
+                }
+            } catch (err) {
+                console.error('❌ Erro no cancelamento Supabase:', err);
+                alert(`❌ ${err.message || 'Erro ao cancelar.'}`);
+                return;
+            }
+        }
+
         try {
             const res = await fetch(`${this.API_BASE}/api/sale/cancel`, {
                 method: 'POST',
@@ -1249,6 +1455,25 @@ class PanobiancoApp {
             const action = document.getElementById('audit-action-filter')?.value || '';
             const dateFrom = document.getElementById('audit-date-from')?.value || '';
             const dateTo = document.getElementById('audit-date-to')?.value || '';
+
+            if (this.useSupabase) {
+                const data = await supabaseAdapter.getAuditLogs({ search, action, dateFrom, dateTo });
+                this.auditEvents = data.logs || [];
+                const select = document.getElementById('audit-action-filter');
+                if (select && data.actionTypes) {
+                    const currentValue = select.value;
+                    select.innerHTML = '<option value="">Todas as ações</option>';
+                    data.actionTypes.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a;
+                        opt.textContent = this.formatActionLabel(a);
+                        select.appendChild(opt);
+                    });
+                    select.value = currentValue;
+                }
+                this.renderAuditEvents();
+                return;
+            }
 
             const params = new URLSearchParams();
             if (search) params.set('search', search);
@@ -1402,6 +1627,23 @@ class PanobiancoApp {
             role,
             avatar: role === 'ADMIN' ? '💼' : '👩‍💼'
         };
+
+        const opName = this.currentUser ? `${this.currentUser.name} [${this.currentUser.code.toUpperCase()}]` : 'Luan [F20729]';
+
+        if (this.useSupabase) {
+            try {
+                await supabaseAdapter.upsertUser(userPayload, opName);
+                alert(`✅ Colaborador ${name} (${code.toUpperCase()}) salvo no Supabase Cloud com sucesso!`);
+                await this.syncWithSupabase(false);
+                this.closeUserModal();
+                this.renderAll();
+                return;
+            } catch (e) {
+                console.error('❌ Erro ao salvar colaborador no Supabase:', e);
+                alert(`❌ Erro ao salvar colaborador: ${e.message}`);
+                return;
+            }
+        }
 
         try {
             const res = await fetch(`${this.API_BASE}/api/users`, {
@@ -1630,6 +1872,76 @@ class PanobiancoApp {
             titleEl.style.color = outOfStock.length > 0 ? '#dc2626' : '#d97706';
         }
         if (detailEl) detailEl.textContent = parts.join(' | ');
+    }
+
+    /* ==================== CONFIGURAÇÃO SUPABASE CLOUD ==================== */
+    openSupabaseModal() {
+        const urlInput = document.getElementById('cfg-supabase-url');
+        const keyInput = document.getElementById('cfg-supabase-key');
+        const resEl = document.getElementById('supabase-test-result');
+
+        if (urlInput) urlInput.value = localStorage.getItem('panobianco_supabase_url') || (SUPABASE_CONFIG.url.includes('SUA-URL') ? '' : SUPABASE_CONFIG.url);
+        if (keyInput) keyInput.value = localStorage.getItem('panobianco_supabase_key') || (SUPABASE_CONFIG.anonKey.includes('SUA-ANON') ? '' : SUPABASE_CONFIG.anonKey);
+        if (resEl) resEl.style.display = 'none';
+
+        document.getElementById('supabase-config-modal').classList.add('active');
+    }
+
+    closeSupabaseModal() {
+        document.getElementById('supabase-config-modal').classList.remove('active');
+    }
+
+    async testSupabaseConnection() {
+        const url = document.getElementById('cfg-supabase-url').value.trim();
+        const key = document.getElementById('cfg-supabase-key').value.trim();
+        const resEl = document.getElementById('supabase-test-result');
+        if (!resEl) return;
+
+        if (!url || !key) {
+            resEl.innerHTML = '<span style="color:#ef4444;">⚠️ Preencha a URL e a Anon Key do Supabase.</span>';
+            resEl.style.display = 'block';
+            return;
+        }
+
+        resEl.innerHTML = '<span style="color:#3b82f6;">⏳ Testando conexão com o Supabase Cloud...</span>';
+        resEl.style.display = 'block';
+
+        try {
+            const testClient = supabase.createClient(url, key);
+            const { data, error } = await testClient.from('tenants').select('id, name').limit(1);
+            if (error) throw error;
+
+            resEl.innerHTML = '<span style="color:#16a34a; font-weight:bold;">✅ Conexão bem-sucedida! PostgreSQL e Realtime prontos.</span>';
+        } catch (err) {
+            resEl.innerHTML = `<span style="color:#ef4444;">❌ Falha na conexão: ${err.message || err}</span>`;
+        }
+    }
+
+    async saveSupabaseConfig() {
+        const url = document.getElementById('cfg-supabase-url').value.trim();
+        const key = document.getElementById('cfg-supabase-key').value.trim();
+
+        if (!url || !key) {
+            alert('⚠️ Preencha a URL e a Anon Key do Supabase.');
+            return;
+        }
+
+        localStorage.setItem('panobianco_supabase_url', url);
+        localStorage.setItem('panobianco_supabase_key', key);
+
+        SUPABASE_CONFIG.url = url;
+        SUPABASE_CONFIG.anonKey = key;
+
+        if (supabaseAdapter.init(SUPABASE_CONFIG)) {
+            this.useSupabase = true;
+            await this.syncWithSupabase(true);
+            supabaseAdapter.subscribeRealtime((type, payload) => this.handleRealtimeUpdate(type, payload));
+            this.updateSyncBadge(true, true);
+            alert('🎉 Supabase Cloud conectado com sucesso! O sistema agora está sincronizado em tempo real na nuvem.');
+            this.closeSupabaseModal();
+        } else {
+            alert('❌ Erro ao inicializar o Supabase com as credenciais informadas.');
+        }
     }
 }
 

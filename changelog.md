@@ -4,6 +4,23 @@ Todas as alterações relevantes do projeto serão documentadas aqui.
 
 ---
 
+## [3.0.0] — 2026-09-01
+
+### Migração para Nuvem: Supabase (PostgreSQL + Realtime WebSockets)
+
+**Motivação:** Permitir que múltiplas recepcionistas vendam simultaneamente de qualquer computador/tablet/celular sem duplicar códigos (`V01`, `V02`...), garantir que atualizações de estoque e fotos feitas no notebook apareçam instantaneamente nas outras telas, e eliminar a dependência de manter o notebook ligado 24h.
+
+### Adicionado
+- **Schema PostgreSQL para Supabase (`supabase/schema.sql`)**: 9 tabelas com suporte a multi-tenancy nativo (`tenant_id`).
+- **Função RPC Atômica `process_sale`**: Lock transacional exclusivo em linha (`FOR UPDATE`), validação de estoque, decremento seguro e geração estrita de códigos sequenciais sem colisão.
+- **Função RPC Atômica `cancel_sale`**: Devolução instantânea de estoque e gravação em `audit_log`.
+- **Sincronização Realtime WebSockets (`supabase/adapter.js`)**: Escuta de eventos em `products`, `sales`, `shifts`, `users` e `audit_log` para atualização em tempo real (< 100ms) em todas as telas abertas.
+- **Supabase Storage para Fotos**: Upload e CDN público no bucket `product-images` para acesso global e rápido.
+- **Script de Migração Automatizado (`supabase/migrate_sqlite_to_supabase.js`)**: Migra todos os produtos, fotos, estoque, usuários e histórico do SQLite para o Supabase.
+- **Modal de Configuração de Nuvem no Frontend**: Permite testar e salvar credenciais Supabase diretamente pelo navegador clicando no badge de status.
+
+---
+
 ## [2.5.0] — 2026-08-31
 
 ### Cancelamento Imediato de Venda pelo Operador

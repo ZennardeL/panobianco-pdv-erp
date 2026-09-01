@@ -1,11 +1,12 @@
 {
   "name": "panobianco-pdv-erp",
-  "version": "2.5.0",
-  "description": "PDV & Mini-ERP para academias — Controle de vendas, estoque, caixa e auditoria",
+  "version": "3.0.0",
+  "description": "PDV & Mini-ERP para academias — Controle de vendas, estoque, caixa e auditoria (Supabase Cloud + Realtime)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "migrate": "node migrate-from-json.js"
+    "migrate": "node migrate-from-json.js",
+    "migrate:supabase": "node supabase/migrate_sqlite_to_supabase.js"
   },
   "keywords": [
     "pdv",
@@ -21,6 +22,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.4",
     "better-sqlite3": "^13.0.3"
   }
 }

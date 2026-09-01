@@ -56,7 +56,7 @@
                     <h1>PANOBIANCO <span>PDV & ERP</span></h1>
                     <span class="unit-tag">Unidade Franquia</span>
                 </div>
-                <span id="sync-status-badge" class="sync-badge online" title="Sincronizado na Rede 24h">🟢 PC Recepção 24h</span>
+                <span id="sync-status-badge" class="sync-badge online" style="cursor: pointer;" onclick="app.openSupabaseModal()" title="Clique para configurar o Supabase Cloud Realtime">🟢 PC Recepção 24h</span>
             </div>
 
             <!-- Navegação entre Telas -->
@@ -778,6 +778,38 @@
         </div>
     </div>
 
+    <!-- Modal: Configuração da Nuvem Supabase -->
+    <div id="supabase-config-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>⚡ Configuração do Supabase Cloud (Realtime)</h3>
+                <button class="close-modal-btn" onclick="app.closeSupabaseModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 9pt; color: #64748b; margin-bottom: 12px;">
+                    Conecte o PDV ao seu banco de dados em nuvem Supabase para ativar a sincronização em tempo real e concorrência sem colisões.
+                </p>
+                <div class="form-group">
+                    <label>Supabase Project URL:</label>
+                    <input type="text" id="cfg-supabase-url" placeholder="https://xyzcompany.supabase.co" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Supabase Anon / Public Key:</label>
+                    <input type="password" id="cfg-supabase-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." autocomplete="off">
+                </div>
+                <div id="supabase-test-result" style="margin-top: 10px; font-size: 9pt; display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.testSupabaseConnection()">🧪 Testar Conexão</button>
+                <button class="btn btn-primary" onclick="app.saveSupabaseConfig()">💾 Salvar & Conectar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supabase JS Client (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase/config.js"></script>
+    <script src="supabase/adapter.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
