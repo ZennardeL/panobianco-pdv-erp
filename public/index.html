@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panobianco - PDV & ERP da Lojinha</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ==================== TELA DE LOGIN PRIVADA (APENAS CÓDIGO) ==================== -->
+    <div id="login-modal" class="modal-overlay active">
+        <div class="login-card">
+            <div class="brand-header">
+                <div class="logo-badge">P</div>
+                <div>
+                    <h2>PANOBIANCO <span>LOJINHA</span></h2>
+                    <p>Frente de Caixa & Controle Interno</p>
+                </div>
+            </div>
+
+            <form id="login-form" onsubmit="event.preventDefault(); app.handleEmployeeLogin();">
+                <div class="login-input-group">
+                    <label>Digite seu Código de Funcionário:</label>
+                    <div class="input-with-icon">
+                        <span class="icon">🆔</span>
+                        <input type="text" id="login-employee-code" placeholder="Ex: f20729" autocomplete="off" autofocus required>
+                    </div>
+                </div>
+
+                <p class="login-error-msg" id="login-error" style="display: none;"></p>
+
+                <button type="submit" class="btn-login-submit" id="btn-login">
+                    🚀 Acessar Caixa / Sistema
+                </button>
+            </form>
+
+            <div class="security-privacy-hint">
+                🔒 <strong>Acesso Individual & Auditado</strong><br>
+                Cada colaborador deve usar seu próprio código. Todas as vendas ficam vinculadas à sua matrícula.
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== APLICAÇÃO PRINCIPAL ==================== -->
+    <div id="app-container" class="app-layout">
+
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <div class="logo-small">P</div>
+                <div class="topbar-title">
+                    <h1>PANOBIANCO <span>PDV & ERP</span></h1>
+                    <span class="unit-tag">Unidade Franquia</span>
+                </div>
+                <span id="sync-status-badge" class="sync-badge online" style="cursor: pointer;" onclick="app.openSupabaseModal()" title="Clique para configurar o Supabase Cloud Realtime">🟢 PC Recepção 24h</span>
+            </div>
+
+            <!-- Navegação entre Telas -->
+            <nav class="nav-tabs">
+                <button class="nav-tab active" id="tab-btn-pdv" onclick="app.navigate('pdv')">
+                    🛒 Frente de Caixa
+                </button>
+                <button class="nav-tab" id="tab-btn-estoque" onclick="app.navigate('estoque')">
+                    📦 Estoque & Fotos
+                </button>
+                <button class="nav-tab" id="tab-btn-caixa" onclick="app.navigate('caixa')">
+                    💵 Fechamento & Vias EVO
+                </button>
+                <!-- Abas Restritas Apenas para Administradores -->
+                <button class="nav-tab admin-only" id="tab-btn-auditoria" onclick="app.navigate('auditoria')">
+                    🛡️ Auditoria & Logs
+                </button>
+                <button class="nav-tab admin-only" id="tab-btn-equipe" onclick="app.navigate('equipe')">
+                    👥 Equipe & Códigos
+                </button>
+                <button class="nav-tab admin-only" id="tab-btn-dashboard" onclick="app.navigate('dashboard')">
+                    📊 Dashboard ERP
+                </button>
+            </nav>
+
+            <!-- Status do Usuário Logado -->
+            <div class="topbar-right">
+                <div class="user-pill">
+                    <span class="user-avatar" id="current-user-avatar">💼</span>
+                    <div class="user-details">
+                        <span class="user-name" id="current-user-name">Luan [F20729]</span>
+                        <span class="user-role" id="current-user-role">Auxiliar Administrativo</span>
+                    </div>
+                </div>
+                <button class="logout-btn" onclick="app.logout()" title="Trocar de Operador">
+                    🚪 Trocar Usuário
+                </button>
+            </div>
+        </header>
+
+        <!-- Banner de Alerta de Estoque -->
+        <div id="stock-alert-banner" style="display:none; background:linear-gradient(135deg,#fef2f2,#fff7ed); border:1px solid #fca5a5; border-radius:12px; padding:12px 20px; margin:0 16px 12px; display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="app.navigate('estoque')">
+            <span style="font-size:1.5em;">⚠️</span>
+            <div style="flex:1;">
+                <strong id="stock-alert-title" style="color:#dc2626;">Atenção: Estoque Crítico</strong>
+                <p id="stock-alert-detail" style="margin:2px 0 0; font-size:0.85em; color:#92400e;"></p>
+            </div>
+            <button onclick="event.stopPropagation(); document.getElementById('stock-alert-banner').style.display='none';" style="background:none;border:none;font-size:1.2em;cursor:pointer;color:#9ca3af;" title="Fechar">✕</button>
+        </div>
+
+        <!-- ==================== VIEW 1: PDV FRENTE DE CAIXA ==================== -->
+        <main id="view-pdv" class="view-content active">
+            <div class="pdv-grid">
+                
+                <!-- Área do Catálogo de Produtos -->
+                <div class="catalog-section">
+                    <div class="catalog-header">
+                        <div class="category-filters">
+                            <button class="cat-pill active" onclick="app.filterCategory('todas')">Todos os Itens</button>
+                            <button class="cat-pill" onclick="app.filterCategory('bebidas')">🥤 Bebidas & Águas</button>
+                            <button class="cat-pill" onclick="app.filterCategory('energeticos')">⚡ Energéticos</button>
+                            <button class="cat-pill" onclick="app.filterCategory('proteicos')">🍫 Barrinhas & Whey</button>
+                            <button class="cat-pill" onclick="app.filterCategory('suplementos')">🏋️ Suplementos & Doses</button>
+                        </div>
+                        
+                        <div class="search-box">
+                            <input type="text" id="pdv-search" placeholder="🔍 Digite o nome do produto (ex: Baly, Água, Bold, Whey)..." oninput="app.searchProducts(this.value)">
+                        </div>
+                    </div>
+
+                    <!-- Grid de Cards de Produtos com Fotos -->
+                    <div class="products-grid" id="products-grid">
+                        <!-- Inserido dinamicamente via JS -->
+                    </div>
+                </div>
+
+                <!-- Painel do Carrinho / Cupom Atual -->
+                <div class="cart-section">
+                    <div class="cart-header">
+                        <div>
+                            <h3>📋 Cupom de Venda</h3>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-top: 2px;">
+                                <span id="next-sale-code-tag" class="sale-code-pill">Próxima: V01</span>
+                                <small id="cart-operator-tag" style="color: #64748b; font-weight: 700;">Operador: Luan [F20729]</small>
+                            </div>
+                        </div>
+                        <button class="btn-clear-cart" onclick="app.clearCart()" title="Limpar Cupom">Limpar</button>
+                    </div>
+
+                    <div class="cart-items" id="cart-items">
+                        <div class="empty-cart">
+                            <div class="empty-cart-icon">🛒</div>
+                            <p>Nenhum item selecionado</p>
+                            <small>Clique nos produtos ao lado para adicionar ao cupom</small>
+                        </div>
+                    </div>
+
+                    <div class="cart-summary">
+                        <div class="summary-line">
+                            <span>Quantidade de Itens:</span>
+                            <span id="cart-total-qty">0 un.</span>
+                        </div>
+                        <div class="summary-line total">
+                            <span>TOTAL A PAGAR:</span>
+                            <span id="cart-total-val">R$ 0,00</span>
+                        </div>
+
+                        <!-- Formas de Pagamento -->
+                        <div class="payment-methods">
+                            <label class="pay-title">Forma de Pagamento:</label>
+                            <div class="pay-grid">
+                                <button class="pay-btn active" data-method="pix" onclick="app.selectPaymentMethod('pix')">
+                                    💠 Pix
+                                </button>
+                                <button class="pay-btn" data-method="cartao_debito" onclick="app.selectPaymentMethod('cartao_debito')">
+                                    💳 Débito
+                                </button>
+                                <button class="pay-btn" data-method="cartao_credito" onclick="app.selectPaymentMethod('cartao_credito')">
+                                    💳 Crédito
+                                </button>
+                                <button class="pay-btn" data-method="dinheiro" onclick="app.selectPaymentMethod('dinheiro')">
+                                    💵 Dinheiro
+                                </button>
+                            </div>
+
+                            <div id="cash-change-container" class="cash-box" style="display: none;">
+                                <div class="cash-input-row">
+                                    <label>Valor Recebido (R$):</label>
+                                    <input type="number" id="cash-received" placeholder="0,00" step="0.50" oninput="app.calculateChange()">
+                                </div>
+                                <div class="change-row">
+                                    <span>Troco a devolver:</span>
+                                    <strong id="change-value">R$ 0,00</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="btn-finalize-sale" id="btn-finalize" onclick="app.finalizeSale()">
+                            ✅ Finalizar Venda & Gerar Código
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- ==================== VIEW 2: ESTOQUE & FOTOS ==================== -->
+        <main id="view-estoque" class="view-content">
+            <div class="view-inner">
+                <div class="module-header">
+                    <div>
+                        <h2>📦 Estoque & Cadastro de Fotos</h2>
+                        <p id="stock-view-desc">Consulta de saldos e personalização das fotos dos produtos</p>
+                    </div>
+                    <div class="header-actions admin-only">
+                        <button class="btn btn-primary" onclick="app.openNewProductModal()">
+                            ➕ Cadastrar Produto
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Resumo Gerencial (Apenas Admin) -->
+                <div class="stock-summary-cards admin-only" id="admin-stock-summary">
+                    <div class="metric-card">
+                        <span class="m-label">Total de Itens</span>
+                        <span class="m-val" id="st-total-products">0</span>
+                    </div>
+                    <div class="metric-card warning">
+                        <span class="m-label">Estoque Crítico (< 5 un)</span>
+                        <span class="m-val" id="st-critical-count">0</span>
+                    </div>
+                    <div class="metric-card info">
+                        <span class="m-label">Valor do Estoque (Custo)</span>
+                        <span class="m-val" id="st-total-cost">R$ 0,00</span>
+                    </div>
+                    <div class="metric-card success">
+                        <span class="m-label">Potencial Faturamento</span>
+                        <span class="m-val" id="st-total-potential">R$ 0,00</span>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <table class="data-table">
+                        <thead>
+                            <tr id="stock-table-header">
+                                <th>Foto</th>
+                                <th>Produto</th>
+                                <th>Categoria</th>
+                                <th class="admin-col">Preço Custo</th>
+                                <th>Preço Venda</th>
+                                <th class="admin-col">Margem</th>
+                                <th>Estoque Atual</th>
+                                <th>Status</th>
+                                <th class="text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stock-table-body">
+                            <!-- Inserido dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- ==================== VIEW 3: FECHAMENTO DE CAIXA & VIAS EVO ==================== -->
+        <main id="view-caixa" class="view-content">
+            <div class="view-inner">
+                <div class="module-header">
+                    <div>
+                        <h2>💵 Fechamento de Turno & Conferência de Vias (EVO)</h2>
+                        <p>Controle das vias da maquininha grampeadas no fechamento impresso</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="app.printCashReport()">
+                            🖨️ Imprimir Espelho p/ Grampear no EVO
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lista de Vias do Turno para Grampo no EVO -->
+                <div class="evo-slips-card">
+                    <div class="evo-slips-header">
+                        <div>
+                            <h3>📎 Vias da Maquininha Deste Turno (Conferência de Grampos)</h3>
+                            <p>Verifique se cada filipeta de cartão/Pix grampeada no caixa impresso do EVO bate com o código da lista:</p>
+                        </div>
+                        <span class="slips-counter-badge" id="slips-card-counter">0 vias de cartão/Pix</span>
+                    </div>
+
+                    <div class="slips-table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Cód. Venda</th>
+                                    <th>Horário</th>
+                                    <th>Forma Pagto</th>
+                                    <th>Valor (R$)</th>
+                                    <th>Itens Vendidos</th>
+                                    <th>Operador</th>
+                                    <th>Status Via</th>
+                                </tr>
+                            </thead>
+                            <tbody id="shift-slips-table-body">
+                                <!-- Inserido dinamicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="shift-grid" style="margin-top: 16px;">
+                    <div class="shift-card">
+                        <h3>🟢 Resumo Financeiro do Turno</h3>
+                        <div class="shift-info-row">
+                            <span>Operador Responsável:</span>
+                            <strong id="shift-operator-name">Letícia [F30188]</strong>
+                        </div>
+                        <div class="shift-info-row">
+                            <span>Início do Turno:</span>
+                            <strong id="shift-start-time">Hoje às 06:00</strong>
+                        </div>
+                        <div class="shift-info-row">
+                            <span>Total de Vendas Registradas:</span>
+                            <strong id="shift-sales-count">0 vendas</strong>
+                        </div>
+
+                        <div class="shift-totals">
+                            <div class="st-line">
+                                <span>💠 Recebido em Pix:</span>
+                                <strong id="shift-val-pix">R$ 0,00</strong>
+                            </div>
+                            <div class="st-line">
+                                <span>💳 Recebido em Cartão:</span>
+                                <strong id="shift-val-card">R$ 0,00</strong>
+                            </div>
+                            <div class="st-line">
+                                <span>💵 Recebido em Dinheiro:</span>
+                                <strong id="shift-val-cash">R$ 0,00</strong>
+                            </div>
+                            <div class="st-line total">
+                                <span>TOTAL DO TURNO:</span>
+                                <strong id="shift-val-total">R$ 0,00</strong>
+                            </div>
+                        </div>
+
+                        <div class="shift-blind-check">
+                            <h4>Conferência da Gaveta de Dinheiro:</h4>
+                            <div class="blind-input-group">
+                                <label>Valor contado em espécie na gaveta (R$):</label>
+                                <input type="number" id="blind-cash-input" placeholder="R$ 0,00" step="0.50">
+                                <button class="btn btn-warning" onclick="app.reconcileShift()">
+                                    Auditar e Fechar Meu Turno
+                                </button>
+                            </div>
+                            <div id="blind-result-box" class="reconcile-box" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <div class="history-card">
+                        <h3>📜 Histórico de Fechamentos Anteriores</h3>
+                        <div class="history-list" id="shift-history-list">
+                            <!-- Inserido dinamicamente -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- ==================== VIEW 4: AUDITORIA & LOGS (ADMIN ONLY) ==================== -->
+        <main id="view-auditoria" class="view-content admin-only">
+            <div class="view-inner">
+                <div class="module-header">
+                    <div>
+                        <h2>🛡️ Trilha de Auditoria & Prevenção a Fraudes</h2>
+                        <p>Registro imutável de todas as ações do sistema</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="app.exportAuditLogs()">
+                            📥 Exportar CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sub-abas -->
+                <div class="audit-subtabs" style="display:flex;gap:8px;margin-bottom:16px;">
+                    <button class="btn btn-sm" id="audit-tab-vendas" onclick="app.switchAuditTab('vendas')" style="font-weight:bold;">🧾 Vendas</button>
+                    <button class="btn btn-sm btn-secondary" id="audit-tab-eventos" onclick="app.switchAuditTab('eventos')">📋 Todos os Eventos</button>
+                </div>
+
+                <!-- Filtros de Vendas -->
+                <div id="audit-filters-vendas" class="audit-filters">
+                    <input type="text" id="audit-search" placeholder="🔍 Filtrar por código da venda (ex: V01), funcionário, produto ou pagamento..." oninput="app.filterAudit(this.value)">
+                </div>
+
+                <!-- Filtros de Eventos -->
+                <div id="audit-filters-eventos" class="audit-filters" style="display:none;">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                        <input type="text" id="audit-event-search" placeholder="🔍 Buscar por operador, ID, detalhes..." oninput="app.filterAuditEvents()" style="flex:1;min-width:200px;">
+                        <select id="audit-action-filter" onchange="app.filterAuditEvents()" style="padding:8px;border:1px solid #d1d5db;border-radius:8px;">
+                            <option value="">Todas as ações</option>
+                        </select>
+                        <input type="date" id="audit-date-from" onchange="app.filterAuditEvents()" style="padding:8px;border:1px solid #d1d5db;border-radius:8px;" title="Data inicial">
+                        <input type="date" id="audit-date-to" onchange="app.filterAuditEvents()" style="padding:8px;border:1px solid #d1d5db;border-radius:8px;" title="Data final">
+                    </div>
+                </div>
+
+                <!-- Tabela de Vendas (existente) -->
+                <div id="audit-view-vendas" class="table-card">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Data & Hora</th>
+                                <th>Operador</th>
+                                <th>Itens Vendidos</th>
+                                <th>Forma de Pagamento</th>
+                                <th>Valor Total</th>
+                                <th>Status</th>
+                                <th class="text-right">Ação Admin</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audit-table-body">
+                            <!-- Inserido dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Tabela de Todos os Eventos (novo) -->
+                <div id="audit-view-eventos" class="table-card" style="display:none;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width:160px;">Data & Hora</th>
+                                <th style="width:140px;">Ação</th>
+                                <th style="width:80px;">Tipo</th>
+                                <th style="width:80px;">ID</th>
+                                <th>Operador</th>
+                                <th>Detalhes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audit-events-body">
+                            <!-- Inserido dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- ==================== VIEW 5: GESTÃO DE EQUIPE (ADMIN ONLY) ==================== -->
+        <main id="view-equipe" class="view-content admin-only">
+            <div class="view-inner">
+                <div class="module-header">
+                    <div>
+                        <h2>👥 Gestão de Colaboradores & Códigos de Acesso</h2>
+                        <p>Cadastre os códigos (ex: f20729, f30188), nomes e funções dos colaboradores</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="app.openNewUserModal()">
+                            ➕ Cadastrar Colaborador
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nome do Colaborador</th>
+                                <th>Cargo / Função</th>
+                                <th>Perfil de Acesso</th>
+                                <th class="text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <!-- Inserido dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- ==================== VIEW 6: DASHBOARD GERENCIAL (ADMIN ONLY) ==================== -->
+        <main id="view-dashboard" class="view-content admin-only">
+            <div class="view-inner">
+                <div class="module-header">
+                    <div>
+                        <h2>📊 Dashboard Executivo (ERP)</h2>
+                        <p>Visão financeira, operacional e de performance por operador</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="app.backupDatabase()">
+                            💾 Backup (JSON)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPIs Linha 1: Financeiro -->
+                <div class="stock-summary-cards">
+                    <div class="metric-card success">
+                        <span class="m-label">Faturamento Bruto</span>
+                        <span class="m-val" id="dash-gross-revenue">R$ 0,00</span>
+                    </div>
+                    <div class="metric-card info">
+                        <span class="m-label">CMV (Custo Mercadoria)</span>
+                        <span class="m-val" id="dash-cmv">R$ 0,00</span>
+                    </div>
+                    <div class="metric-card success">
+                        <span class="m-label">Lucro Bruto</span>
+                        <span class="m-val" id="dash-net-profit">R$ 0,00</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="m-label">Margem Bruta</span>
+                        <span class="m-val" id="dash-avg-margin">0%</span>
+                    </div>
+                </div>
+
+                <!-- KPIs Linha 2: Operacional -->
+                <div class="stock-summary-cards" style="margin-top:12px;">
+                    <div class="metric-card warning">
+                        <span class="m-label">Ticket Médio</span>
+                        <span class="m-val" id="dash-ticket-medio">R$ 0,00</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="m-label">Total de Vendas</span>
+                        <span class="m-val" id="dash-total-sales">0</span>
+                    </div>
+                    <div class="metric-card warning">
+                        <span class="m-label">Itens Vendidos</span>
+                        <span class="m-val" id="dash-units-sold">0 un.</span>
+                    </div>
+                    <div class="metric-card danger" id="dash-cancel-card">
+                        <span class="m-label">Cancelamentos</span>
+                        <span class="m-val" id="dash-cancel-rate">0 (0%)</span>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <!-- Top 5 Produtos -->
+                    <div class="dash-card">
+                        <h3>🏆 Top 5 Produtos Mais Vendidos</h3>
+                        <div class="top-products-list" id="dash-top-products">
+                            <!-- Inserido dinamicamente -->
+                        </div>
+                    </div>
+
+                    <!-- Vendas por Pagamento -->
+                    <div class="dash-card">
+                        <h3>💳 Vendas por Meio de Pagamento</h3>
+                        <div class="pay-distribution" id="dash-pay-distribution">
+                            <!-- Inserido dinamicamente -->
+                        </div>
+                    </div>
+
+                    <!-- Ranking de Operadores -->
+                    <div class="dash-card">
+                        <h3>👥 Ranking de Operadores</h3>
+                        <div id="dash-operator-ranking">
+                            <!-- Inserido dinamicamente -->
+                        </div>
+                    </div>
+
+                    <!-- Top 5 Produtos por Lucro -->
+                    <div class="dash-card">
+                        <h3>💰 Top 5 Produtos por Lucro</h3>
+                        <div id="dash-top-profit">
+                            <!-- Inserido dinamicamente -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+    <!-- ==================== MODAIS ==================== -->
+    
+    <!-- Modal: Adicionar / Editar Produto -->
+    <div id="product-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modal-product-title">Cadastrar Novo Produto</h3>
+                <button class="close-btn" onclick="app.closeProductModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit-prod-id">
+                <input type="hidden" id="edit-prod-image">
+                
+                <div class="form-group">
+                    <label>Nome do Produto:</label>
+                    <input type="text" id="prod-name" placeholder="Ex: Baly Maçã Verde 473ml">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Categoria:</label>
+                        <select id="prod-category">
+                            <option value="bebidas">🥤 Bebidas & Águas</option>
+                            <option value="energeticos">⚡ Energéticos</option>
+                            <option value="proteicos">🍫 Barrinhas & Proteicos</option>
+                            <option value="suplementos">🏋️ Suplementos & Doses</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Emoji / Ícone:</label>
+                        <input type="text" id="prod-icon" placeholder="Ex: ⚡ ou 🥤">
+                    </div>
+                </div>
+                
+                <!-- Upload de Foto no Produto -->
+                <div class="form-group">
+                    <label>Foto do Produto (Opcional):</label>
+                    <div class="photo-upload-container">
+                        <input type="file" id="prod-photo-input" accept="image/*" onchange="app.previewProductPhoto(this)">
+                        <div class="photo-preview-box" id="prod-photo-preview-box">
+                            <span id="prod-photo-placeholder">Nenhuma foto selecionada</span>
+                            <img id="prod-photo-preview-img" src="" style="display:none;" alt="Preview">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Preço de Custo (R$):</label>
+                        <input type="number" id="prod-cost" step="0.10" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Preço de Venda (R$):</label>
+                        <input type="number" id="prod-price" step="0.10" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Estoque Atual (Unidades):</label>
+                        <input type="number" id="prod-stock" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Estoque Mínimo de Alerta:</label>
+                        <input type="number" id="prod-min-stock" value="5">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeProductModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="app.saveProduct()">Salvar Produto</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Rápido: Alterar Foto do Produto (Disponível para Recepção e Gestores) -->
+    <div id="quick-photo-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>📷 Cadastrar / Alterar Foto do Produto</h3>
+                <button class="close-btn" onclick="app.closeQuickPhotoModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="quick-photo-prod-id">
+                <p id="quick-photo-prod-name" style="font-weight: 800; color: #0f172a; margin-bottom: 12px;"></p>
+                
+                <div class="form-group">
+                    <label>Selecione a imagem do produto (do computador ou celular):</label>
+                    <input type="file" id="quick-photo-file-input" accept="image/*" onchange="app.previewQuickPhoto(this)">
+                </div>
+
+                <div class="photo-preview-box large" id="quick-photo-preview-box">
+                    <span id="quick-photo-placeholder">Selecione uma imagem para visualizar</span>
+                    <img id="quick-photo-preview-img" src="" style="display:none;" alt="Foto do Produto">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeQuickPhotoModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="app.saveQuickPhoto()">Salvar Foto</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Adicionar Entrada de Estoque -->
+    <div id="restock-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>📦 Entrada de Estoque (Reposição)</h3>
+                <button class="close-btn" onclick="app.closeRestockModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="restock-prod-id">
+                <p id="restock-prod-name" style="font-weight: 700; color: #0f172a; margin-bottom: 12px;"></p>
+                <div class="form-group">
+                    <label>Quantidade de unidades a ADICIONAR:</label>
+                    <input type="number" id="restock-qty" placeholder="Ex: 12 ou 24">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeRestockModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="app.confirmRestock()">Confirmar Entrada</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Cadastrar Novo Colaborador -->
+    <div id="user-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>👥 Cadastrar / Editar Colaborador</h3>
+                <button class="close-btn" onclick="app.closeUserModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Código do Funcionário (Ex: f20729, f30188):</label>
+                    <input type="text" id="user-code-input" placeholder="Ex: f30188" required>
+                </div>
+                <div class="form-group">
+                    <label>Nome do Colaborador:</label>
+                    <input type="text" id="user-name-input" placeholder="Ex: Letícia Santos" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Cargo / Função:</label>
+                        <input type="text" id="user-title-input" placeholder="Ex: Recepcionista Balcão">
+                    </div>
+                    <div class="form-group">
+                        <label>Perfil de Acesso:</label>
+                        <select id="user-role-input">
+                            <option value="OPERADOR">OPERADOR (Apenas Frente de Caixa & Estoque)</option>
+                            <option value="ADMIN">ADMIN (Gestão Total, Auditoria e Lucros)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeUserModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="app.saveUser()">Salvar Colaborador</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Cancelamento com Auditoria -->
+    <div id="cancel-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>⚠️ Cancelar Venda (Auditoria)</h3>
+                <button class="close-btn" onclick="app.closeCancelModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="cancel-sale-id">
+                <p style="color: #ef4444; font-size: 9pt; margin-bottom: 10px;">
+                    O cancelamento devolverá os itens ao estoque e registrará o operador e a justificativa no log de auditoria.
+                </p>
+                <div class="form-group">
+                    <label>Justificativa do Cancelamento (Obrigatório):</label>
+                    <textarea id="cancel-reason" placeholder="Ex: Cliente desistiu antes do pagamento, erro de digitação, etc." rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeCancelModal()">Voltar</button>
+                <button class="btn btn-danger" onclick="app.confirmCancelSale()">Confirmar Cancelamento</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Sucesso V01 -->
+    <div id="success-modal" class="modal-overlay">
+        <div class="modal-card text-center" style="max-width: 420px;">
+            <div class="sale-code-highlight-box">
+                <span class="code-badge-label">CÓDIGO DA VENDA</span>
+                <div class="huge-sale-code" id="modal-sale-code">V01</div>
+                <div class="staple-evo-instruction">
+                    ✍️ <strong>ANOTE COM CANETA NA VIA DA MAQUININHA:</strong><br>
+                    Escreva <span class="highlight-code" id="modal-code-text">V01</span> na filipeta e grampeie no caixa impresso do EVO!
+                </div>
+            </div>
+
+            <div class="receipt-preview" id="receipt-preview"></div>
+            
+            <button class="btn btn-primary" style="width: 100%; height: 46px; font-size: 11pt; margin-top: 14px;" onclick="app.closeSuccessModal()">
+                ➕ Próxima Venda
+            </button>
+            <button class="btn" id="btn-cancel-last-sale" style="width: 100%; height: 40px; font-size: 10pt; margin-top: 8px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5;" onclick="app.cancelLastSale()">
+                ❌ Cancelar Esta Venda (erro de operação)
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal: Configuração da Nuvem Supabase -->
+    <div id="supabase-config-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>⚡ Configuração do Supabase Cloud (Realtime)</h3>
+                <button class="close-modal-btn" onclick="app.closeSupabaseModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 9pt; color: #64748b; margin-bottom: 12px;">
+                    Conecte o PDV ao seu banco de dados em nuvem Supabase para ativar a sincronização em tempo real e concorrência sem colisões.
+                </p>
+                <div class="form-group">
+                    <label>Supabase Project URL:</label>
+                    <input type="text" id="cfg-supabase-url" placeholder="https://xyzcompany.supabase.co" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Supabase Anon / Public Key:</label>
+                    <input type="password" id="cfg-supabase-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." autocomplete="off">
+                </div>
+                <div id="supabase-test-result" style="margin-top: 10px; font-size: 9pt; display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.testSupabaseConnection()">🧪 Testar Conexão</button>
+                <button class="btn btn-primary" onclick="app.saveSupabaseConfig()">💾 Salvar & Conectar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supabase JS Client (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase/config.js"></script>
+    <script src="supabase/adapter.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
