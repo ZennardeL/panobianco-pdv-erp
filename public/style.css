@@ -1445,30 +1445,124 @@ body {
     line-height: 1.4;
 }
 
-/* Impressão */
+.print-only {
+    display: none !important;
+}
+
+/* ==================== IMPRESSÃO PROFISSIONAL PADRÃO EVO (PRETO E BRANCO) ==================== */
 @media print {
-    .topbar, .nav-tabs, .header-actions, .shift-blind-check, .history-card, .logout-btn {
+    .print-only {
+        display: block !important;
+    }
+    #app-container, .modal-overlay, #stock-alert-banner, .topbar, .nav-tabs, .header-actions {
         display: none !important;
     }
-    body, .app-layout, .view-content {
+    body {
         background: #ffffff !important;
-        height: auto !important;
-        overflow: visible !important;
-        padding: 0 !important;
+        color: #000000 !important;
+        font-family: 'Courier New', Courier, monospace, 'Plus Jakarta Sans', Arial, sans-serif !important;
+        font-size: 9pt !important;
+        margin: 0 !important;
+        padding: 6mm !important;
     }
-    .evo-slips-card {
-        border: 2px solid #000000 !important;
-        box-shadow: none !important;
+    .evo-receipt {
+        width: 100% !important;
+        max-width: 800px !important;
+        margin: 0 auto !important;
+        color: #000000 !important;
+        background: #ffffff !important;
+    }
+    .evo-receipt-header {
+        text-align: center;
+        margin-bottom: 8px;
+    }
+    .evo-receipt-header h2 {
+        font-size: 12pt;
+        font-weight: 800;
+        margin: 0 0 2px 0;
+        color: #000000 !important;
+        letter-spacing: 0.5px;
+    }
+    .evo-receipt-header h3 {
+        font-size: 9.5pt;
+        font-weight: 600;
+        margin: 0;
+        color: #000000 !important;
+    }
+    .divider-double {
+        border-top: 2px solid #000000;
+        border-bottom: 1px solid #000000;
+        height: 3px;
+        margin: 6px 0;
+    }
+    .divider-line {
+        border-top: 1px dashed #000000;
+        margin: 8px 0;
+    }
+    .evo-meta-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 3px 12px;
+        font-size: 8.5pt;
+        margin-bottom: 6px;
+    }
+    .evo-section-title {
+        font-weight: 800;
+        font-size: 9pt;
+        margin: 6px 0 3px 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .evo-print-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 6px;
+        font-size: 8.5pt;
+    }
+    .evo-print-table th, .evo-print-table td {
+        border: 1px solid #000000;
+        padding: 3px 5px;
+        color: #000000 !important;
+    }
+    .evo-print-table th {
+        background: #f0f0f0 !important;
+        font-weight: 700;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .evo-table-total th {
+        font-weight: 800;
+        border-top: 2px solid #000000;
+    }
+    .evo-instruction {
+        font-size: 8pt;
+        margin: 1px 0 4px 0;
+        font-style: italic;
+    }
+    .evo-signatures {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 36px;
+        margin-bottom: 14px;
         page-break-inside: avoid;
     }
-    .slip-code-tag {
-        background: #000000 !important;
-        color: #ffffff !important;
-        border: 1px solid #000000 !important;
+    .sig-block {
+        text-align: center;
+        width: 42%;
     }
-    .data-table th, .data-table td {
-        border-bottom: 1px solid #000000 !important;
-        color: #000000 !important;
+    .sig-line {
+        border-top: 1px solid #000000;
+        margin-bottom: 3px;
+    }
+    .sig-block p {
+        margin: 0;
+        font-size: 8pt;
+    }
+    .evo-receipt-footer {
+        text-align: center;
+        border-top: 1px solid #000000;
+        padding-top: 3px;
+        font-size: 7pt;
     }
 }
 
