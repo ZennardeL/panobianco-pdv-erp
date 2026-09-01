@@ -21,7 +21,9 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.112.4",
+    "@supabase/supabase-js": "^2.112.4"
+  },
+  "devDependencies": {
     "better-sqlite3": "^13.0.3"
   }
 }
