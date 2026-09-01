@@ -3,8 +3,8 @@
   "version": "3.0.0",
   "description": "PDV & Mini-ERP para academias — Controle de vendas, estoque, caixa e auditoria (Supabase Cloud + Realtime)",
   "scripts": {
-    "start": "node server.js",
-    "migrate": "node migrate-from-json.js",
+    "start": "node local-server/server.js",
+    "migrate:local": "node local-server/migrate-from-json.js",
     "migrate:supabase": "node supabase/migrate_sqlite_to_supabase.js"
   },
   "keywords": [
