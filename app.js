@@ -19,6 +19,7 @@ class PanobiancoApp {
         this.tempQuickPhotoBase64 = null;
         this.tempProductPhotoBase64 = null;
         this.syncInterval = null;
+        this.editingUserOriginalCode = null;
         
         this.init();
     }
@@ -1756,15 +1757,19 @@ class PanobiancoApp {
         if (!tbody) return;
         tbody.innerHTML = '';
 
+        const currentCode = this.currentUser ? this.currentUser.code.toLowerCase() : '';
+
         (this.state.users || []).forEach(u => {
+            const isSelf = u.code.toLowerCase() === currentCode;
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><code><strong>${u.code.toUpperCase()}</strong></code></td>
-                <td><strong>${u.avatar || '👤'} ${u.name}</strong></td>
+                <td><strong>${u.avatar || (u.role === 'ADMIN' ? '💼' : '👩‍💼')} ${u.name}</strong></td>
                 <td>${u.title || '-'}</td>
                 <td><span class="badge ${u.role === 'ADMIN' ? 'badge-red' : 'badge-blue'}">${u.role}</span></td>
                 <td class="text-right">
                     <button class="btn btn-sm btn-secondary" onclick="app.editUser('${u.code}')">✏️ Editar</button>
+                    ${!isSelf ? `<button class="btn btn-sm" style="background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;margin-left:6px;" onclick="app.deleteUser('${u.code}', '${u.name}')" title="Excluir Colaborador">🗑️ Excluir</button>` : `<span style="font-size:0.8em;color:#94a3b8;margin-left:6px;">(Você)</span>`}
                 </td>
             `;
             tbody.appendChild(tr);
@@ -1772,6 +1777,9 @@ class PanobiancoApp {
     }
 
     openNewUserModal() {
+        this.editingUserOriginalCode = null;
+        const titleEl = document.getElementById('user-modal-title');
+        if (titleEl) titleEl.textContent = '➕ Cadastrar Novo Colaborador';
         document.getElementById('user-code-input').value = '';
         document.getElementById('user-name-input').value = '';
         document.getElementById('user-title-input').value = '';
@@ -1783,7 +1791,11 @@ class PanobiancoApp {
         const user = (this.state.users || []).find(u => u.code.toLowerCase() === userCode.toLowerCase());
         if (!user) return;
 
-        document.getElementById('user-code-input').value = user.code;
+        this.editingUserOriginalCode = user.code.toLowerCase();
+        const titleEl = document.getElementById('user-modal-title');
+        if (titleEl) titleEl.textContent = `✏️ Editar Colaborador (${user.code.toUpperCase()})`;
+
+        document.getElementById('user-code-input').value = user.code.toUpperCase();
         document.getElementById('user-name-input').value = user.name;
         document.getElementById('user-title-input').value = user.title || '';
         document.getElementById('user-role-input').value = user.role;
@@ -1810,11 +1822,12 @@ class PanobiancoApp {
             avatar: role === 'ADMIN' ? '💼' : '👩‍💼'
         };
 
+        const originalCode = this.editingUserOriginalCode;
         const opName = this.currentUser ? `${this.currentUser.name} [${this.currentUser.code.toUpperCase()}]` : 'Luan [F20729]';
 
         if (this.useSupabase) {
             try {
-                await supabaseAdapter.upsertUser(userPayload, opName);
+                await supabaseAdapter.upsertUser(userPayload, opName, originalCode);
                 alert(`✅ Colaborador ${name} (${code.toUpperCase()}) salvo no Supabase Cloud com sucesso!`);
                 await this.syncWithSupabase(false);
                 this.closeUserModal();
@@ -1831,7 +1844,7 @@ class PanobiancoApp {
             const res = await fetch(`${this.API_BASE}/api/users`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(userPayload)
+                body: JSON.stringify({ ...userPayload, originalCode })
             });
             if (res.ok) {
                 const data = await res.json();
@@ -1839,6 +1852,9 @@ class PanobiancoApp {
                 this.saveLocalState(data.state);
             }
         } catch (e) {
+            if (originalCode && originalCode !== code) {
+                this.state.users = this.state.users.filter(u => u.code.toLowerCase() !== originalCode);
+            }
             const idx = this.state.users.findIndex(u => u.code.toLowerCase() === code);
             if (idx !== -1) {
                 this.state.users[idx] = userPayload;
@@ -1853,7 +1869,54 @@ class PanobiancoApp {
         alert(`✅ Colaborador ${name} (${code.toUpperCase()}) salvo com sucesso!`);
     }
 
+    async deleteUser(userCode, userName) {
+        const code = userCode.toLowerCase();
+        const currentCode = this.currentUser ? this.currentUser.code.toLowerCase() : '';
+
+        if (code === currentCode) {
+            alert('⚠️ Você não pode excluir o seu próprio usuário enquanto estiver logado nele.');
+            return;
+        }
+
+        const confirmDel = confirm(`Tem certeza que deseja EXCLUIR o colaborador "${userName}" (${userCode.toUpperCase()})?\n\nEle não poderá mais acessar o sistema ou abrir turnos.`);
+        if (!confirmDel) return;
+
+        const opName = this.currentUser ? `${this.currentUser.name} [${this.currentUser.code.toUpperCase()}]` : 'Luan [F20729]';
+
+        if (this.useSupabase) {
+            try {
+                await supabaseAdapter.deleteUser(code, userName, opName);
+                alert(`🗑️ Colaborador ${userName} (${userCode.toUpperCase()}) excluído com sucesso!`);
+                await this.syncWithSupabase(false);
+                this.renderAll();
+                return;
+            } catch (e) {
+                console.error('❌ Erro ao excluir colaborador no Supabase:', e);
+                alert(`❌ Erro ao excluir colaborador: ${e.message}`);
+                return;
+            }
+        }
+
+        try {
+            const res = await fetch(`${this.API_BASE}/api/users/${code}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                const data = await res.json();
+                this.state = data.state;
+                this.saveLocalState(data.state);
+            }
+        } catch (e) {
+            this.state.users = this.state.users.filter(u => u.code.toLowerCase() !== code);
+            this.saveLocalState(this.state);
+        }
+
+        this.renderAll();
+        alert(`🗑️ Colaborador ${userName} (${userCode.toUpperCase()}) excluído com sucesso!`);
+    }
+
     closeUserModal() {
+        this.editingUserOriginalCode = null;
         document.getElementById('user-modal').classList.remove('active');
     }
 

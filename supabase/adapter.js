@@ -430,22 +430,34 @@ class SupabaseAdapter {
     }
 
     /**
-     * Salvar / Atualizar Usuário
+     * Salvar / Atualizar Usuário (com suporte a alteração de código sem duplicar)
      */
-    async upsertUser(user, operatorName, tenantId = 'default') {
+    async upsertUser(user, operatorName, originalCode = null, tenantId = 'default') {
         if (!this.client) throw new Error('Supabase não conectado.');
 
-        const userId = user.id || ('user_' + user.code.toLowerCase());
+        const newCode = user.code.toLowerCase();
+        const origCode = originalCode ? originalCode.toLowerCase() : null;
+
+        // Se o código foi alterado durante a edição, remover o registro antigo primeiro para evitar duplicação
+        if (origCode && origCode !== newCode) {
+            await this.client
+                .from('users')
+                .delete()
+                .eq('tenant_id', tenantId)
+                .eq('code', origCode);
+        }
+
+        const userId = user.id || newCode;
         const { error } = await this.client
             .from('users')
             .upsert({
                 id: userId,
                 tenant_id: tenantId,
-                code: user.code.toLowerCase(),
+                code: newCode,
                 name: user.name,
                 role: user.role,
                 title: user.title || '',
-                avatar: user.avatar || '👤',
+                avatar: user.avatar || (user.role === 'ADMIN' ? '💼' : '👩‍💼'),
                 active: user.active !== false
             });
 
@@ -453,12 +465,40 @@ class SupabaseAdapter {
 
         await this.client.from('audit_log').insert({
             tenant_id: tenantId,
-            action: 'USUARIO_ATUALIZADO',
+            action: origCode ? 'USUARIO_ATUALIZADO' : 'USUARIO_CRIADO',
             entity_type: 'user',
             entity_id: userId,
             operator_id: 'admin',
             operator_name: operatorName,
-            details: `Colaborador ${user.name} [${user.code.toUpperCase()}] atualizado`
+            details: origCode && origCode !== newCode 
+                ? `Colaborador ${user.name} atualizado (Código alterado de ${origCode.toUpperCase()} para ${newCode.toUpperCase()})`
+                : `Colaborador ${user.name} [${newCode.toUpperCase()}] ${origCode ? 'atualizado' : 'cadastrado'}`
+        });
+    }
+
+    /**
+     * Excluir Usuário do Supabase Cloud
+     */
+    async deleteUser(userCode, userName, operatorName, tenantId = 'default') {
+        if (!this.client) throw new Error('Supabase não conectado.');
+
+        const codeToDel = userCode.toLowerCase();
+        const { error } = await this.client
+            .from('users')
+            .delete()
+            .eq('tenant_id', tenantId)
+            .eq('code', codeToDel);
+
+        if (error) throw error;
+
+        await this.client.from('audit_log').insert({
+            tenant_id: tenantId,
+            action: 'USUARIO_EXCLUIDO',
+            entity_type: 'user',
+            entity_id: codeToDel,
+            operator_id: 'admin',
+            operator_name: operatorName,
+            details: `Colaborador ${userName || codeToDel} [${codeToDel.toUpperCase()}] foi excluído por ${operatorName}`
         });
     }
 
