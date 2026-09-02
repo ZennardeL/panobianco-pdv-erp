@@ -358,7 +358,8 @@ class PanobiancoApp {
     filterCategory(category) {
         this.activeCategory = category;
         document.querySelectorAll('.cat-pill').forEach(btn => {
-            btn.classList.toggle('active', btn.innerText.toLowerCase().includes(category) || (category === 'todas' && btn.innerText.includes('Todos')));
+            const onclickAttr = btn.getAttribute('onclick') || '';
+            btn.classList.toggle('active', onclickAttr.includes(`'${category}'`));
         });
         this.renderProductsGrid();
     }
@@ -376,7 +377,11 @@ class PanobiancoApp {
         let filtered = this.state.products || [];
 
         if (this.activeCategory && this.activeCategory !== 'todas') {
-            filtered = filtered.filter(p => p.category === this.activeCategory);
+            if (this.activeCategory === 'bebidas') {
+                filtered = filtered.filter(p => p.category === 'bebidas' || p.category === 'energeticos');
+            } else {
+                filtered = filtered.filter(p => p.category === this.activeCategory);
+            }
         }
 
         if (this.searchQuery) {
@@ -764,7 +769,7 @@ class PanobiancoApp {
             tr.innerHTML = `
                 <td>${photoCell}</td>
                 <td><strong>${prod.name}</strong></td>
-                <td>${prod.category.toUpperCase()}</td>
+                <td><span style="font-size:0.85em;font-weight:600;color:#475569;">${this.formatCategoryLabel(prod.category)}</span></td>
                 ${isAdmin ? `<td>R$ ${prod.cost.toFixed(2).replace('.', ',')}</td>` : ''}
                 <td><strong>R$ ${prod.price.toFixed(2).replace('.', ',')}</strong></td>
                 ${isAdmin ? `<td style="color: #10b981; font-weight: 700;">${margin.toFixed(0)}%</td>` : ''}
@@ -789,6 +794,25 @@ class PanobiancoApp {
             if (elCrit) elCrit.innerText = criticalCount;
             if (elCost) elCost.innerText = `R$ ${totalCostValue.toFixed(2).replace('.', ',')}`;
             if (elPot) elPot.innerText = `R$ ${totalPotentialRevenue.toFixed(2).replace('.', ',')}`;
+        }
+    }
+
+    formatCategoryLabel(cat) {
+        switch ((cat || '').toLowerCase()) {
+            case 'bebidas':
+            case 'energeticos':
+                return '🥤 Bebidas & Energéticos';
+            case 'proteicos':
+                return '🍫 Barrinhas & Whey';
+            case 'suplementos':
+                return '🏋️ Suplementos & Doses';
+            case 'roupas':
+            case 'vestuario':
+                return '👕 Roupas & Vestuário';
+            case 'acessorios':
+                return '🎒 Acessórios & Brindes';
+            default:
+                return cat ? cat.toUpperCase() : '-';
         }
     }
 
