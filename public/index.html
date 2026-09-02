@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2.3.0">
 </head>
 <body>
 
@@ -27,7 +27,7 @@
                     <label>Digite seu Código de Funcionário:</label>
                     <div class="input-with-icon">
                         <span class="icon">🆔</span>
-                        <input type="text" id="login-employee-code" placeholder="Ex: f20729" autocomplete="off" autofocus required>
+                        <input type="text" id="login-employee-code" placeholder="Digite seu código ou matrícula..." autocomplete="off" autofocus required>
                     </div>
                 </div>
 
@@ -85,10 +85,10 @@
             <!-- Status do Usuário Logado -->
             <div class="topbar-right">
                 <div class="user-pill">
-                    <span class="user-avatar" id="current-user-avatar">💼</span>
+                    <span class="user-avatar" id="current-user-avatar">👤</span>
                     <div class="user-details">
-                        <span class="user-name" id="current-user-name">Luan [F20729]</span>
-                        <span class="user-role" id="current-user-role">Auxiliar Administrativo</span>
+                        <span class="user-name" id="current-user-name">Operador</span>
+                        <span class="user-role" id="current-user-role">Recepção / Caixa</span>
                     </div>
                 </div>
                 <button class="logout-btn" onclick="app.logout()" title="Trocar de Operador">
@@ -141,7 +141,7 @@
                             <h3>📋 Cupom de Venda</h3>
                             <div style="display: flex; gap: 8px; align-items: center; margin-top: 2px;">
                                 <span id="next-sale-code-tag" class="sale-code-pill">Próxima: V01</span>
-                                <small id="cart-operator-tag" style="color: #64748b; font-weight: 700;">Operador: Luan [F20729]</small>
+                                <small id="cart-operator-tag" style="color: #64748b; font-weight: 700;">Operador: --</small>
                             </div>
                         </div>
                         <button class="btn-clear-cart" onclick="app.clearCart()" title="Limpar Cupom">Limpar</button>
@@ -213,9 +213,22 @@
                         <p id="stock-view-desc">Consulta de saldos e personalização das fotos dos produtos</p>
                     </div>
                     <div class="header-actions admin-only">
+                        <button class="btn btn-secondary" onclick="app.openDuplicatesModal()" title="Localizar e limpar produtos duplicados">
+                            🧹 Limpar Duplicados
+                        </button>
                         <button class="btn btn-primary" onclick="app.openNewProductModal()">
                             ➕ Cadastrar Produto
                         </button>
+                    </div>
+                </div>
+
+                <!-- Barra de Busca & Alerta de Duplicados -->
+                <div class="stock-toolbar" style="display: flex; gap: 10px; margin-bottom: 12px; align-items: center; flex-wrap: wrap;">
+                    <div class="search-box" style="flex: 1; min-width: 240px; margin: 0;">
+                        <input type="text" id="stock-search-input" placeholder="🔍 Buscar no estoque (nome, categoria)..." oninput="app.filterStockTable(this.value)">
+                    </div>
+                    <div id="duplicate-alert-pill" class="duplicate-pill" style="display: none; cursor: pointer;" onclick="app.openDuplicatesModal()" title="Clique para ver os produtos duplicados">
+                        ⚠️ <span id="duplicate-count-text">0 duplicados encontrados</span> &bull; <u>Resolver</u>
                     </div>
                 </div>
 
@@ -451,7 +464,7 @@
                 <div class="module-header">
                     <div>
                         <h2>👥 Gestão de Colaboradores & Códigos de Acesso</h2>
-                        <p>Cadastre os códigos (ex: f20729, f30188), nomes e funções dos colaboradores</p>
+                        <p>Cadastre os códigos de acesso, nomes e funções dos colaboradores</p>
                     </div>
                     <div class="header-actions">
                         <button class="btn btn-primary" onclick="app.openNewUserModal()">
@@ -608,7 +621,12 @@
                 
                 <!-- Upload de Foto no Produto -->
                 <div class="form-group">
-                    <label>Foto do Produto (Opcional):</label>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label style="margin-bottom:0;">Foto do Produto (Opcional):</label>
+                        <button type="button" class="btn btn-sm btn-danger" id="btn-remove-prod-photo" style="display: none; height: 22px; padding: 0 8px; font-size: 7.5pt;" onclick="app.removeProductPhotoFromModal()">
+                            🗑️ Remover Foto
+                        </button>
+                    </div>
                     <div class="photo-upload-container">
                         <input type="file" id="prod-photo-input" accept="image/*" onchange="app.previewProductPhoto(this)">
                         <div class="photo-preview-box" id="prod-photo-preview-box">
@@ -639,9 +657,14 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="app.closeProductModal()">Cancelar</button>
-                <button class="btn btn-primary" onclick="app.saveProduct()">Salvar Produto</button>
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                <button type="button" class="btn btn-danger admin-only" id="btn-modal-delete-prod" style="display: none;" onclick="app.deleteCurrentEditingProduct()">
+                    🗑️ Excluir Produto
+                </button>
+                <div style="display: flex; gap: 8px; margin-left: auto;">
+                    <button class="btn btn-secondary" onclick="app.closeProductModal()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="app.saveProduct()">Salvar Produto</button>
+                </div>
             </div>
         </div>
     </div>
@@ -667,9 +690,14 @@
                     <img id="quick-photo-preview-img" src="" style="display:none;" alt="Foto do Produto">
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="app.closeQuickPhotoModal()">Cancelar</button>
-                <button class="btn btn-primary" onclick="app.saveQuickPhoto()">Salvar Foto</button>
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                <button type="button" class="btn btn-danger" id="btn-quick-remove-photo" style="display: none;" onclick="app.removeQuickPhoto()">
+                    🗑️ Remover Foto
+                </button>
+                <div style="display: flex; gap: 8px; margin-left: auto;">
+                    <button class="btn btn-secondary" onclick="app.closeQuickPhotoModal()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="app.saveQuickPhoto()">Salvar Foto</button>
+                </div>
             </div>
         </div>
     </div>
@@ -705,8 +733,8 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label>Código do Funcionário (Ex: f20729, f30188):</label>
-                    <input type="text" id="user-code-input" placeholder="Ex: f30188" required>
+                    <label>Código do Funcionário (Ex: f10001, rec01):</label>
+                    <input type="text" id="user-code-input" placeholder="Ex: f10001" required>
                 </div>
                 <div class="form-group">
                     <label>Nome do Colaborador:</label>
@@ -808,13 +836,34 @@
         </div>
     </div>
 
+    <!-- Modal: Gerenciamento e Limpeza de Produtos Duplicados -->
+    <div id="duplicates-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 650px;">
+            <div class="modal-header">
+                <h3>🧹 Limpeza & Mesclagem de Produtos Duplicados</h3>
+                <button class="close-btn" onclick="app.closeDuplicatesModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 480px; overflow-y: auto;">
+                <p style="font-size: 8.5pt; color: #64748b; margin-bottom: 14px;">
+                    O sistema analisou seu catálogo e agrupou os itens com nomes idênticos ou semelhantes. Escolha <strong>Excluir</strong> para remover o item duplicado ou <strong>Mesclar</strong> para somar o estoque no produto principal.
+                </p>
+                <div id="duplicates-list-container">
+                    <!-- Preenchido dinamicamente via JS -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeDuplicatesModal()">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ==================== ESPELHO DE FECHAMENTO PROFISSIONAL (PADRÃO EVO - IMPRESSÃO PRETO E BRANCO) ==================== -->
     <div id="evo-print-sheet" class="print-only"></div>
 
     <!-- Supabase JS Client (CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase/config.js"></script>
-    <script src="supabase/adapter.js"></script>
-    <script src="app.js"></script>
+    <script src="supabase/config.js?v=2.3.0"></script>
+    <script src="supabase/adapter.js?v=2.3.0"></script>
+    <script src="app.js?v=2.3.0"></script>
 </body>
 </html>

@@ -1582,3 +1582,78 @@ body {
         gap: 8px;
     }
 }
+
+/* ==================== DUPLICATE PRODUCTS & STOCK TOOLBAR ==================== */
+.duplicate-pill {
+    background: #fffbeb;
+    border: 1.5px solid #fde68a;
+    color: #b45309;
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    font-size: 8pt;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.duplicate-pill:hover {
+    background: #fef3c7;
+    border-color: #f59e0b;
+    transform: translateY(-1px);
+}
+
+.duplicate-group-card {
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: var(--radius-md);
+    padding: 14px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow-sm);
+}
+
+.duplicate-group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed #cbd5e1;
+}
+
+.duplicate-group-title {
+    font-size: 10pt;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.duplicate-item-row {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.duplicate-item-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.duplicate-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.highlight-duplicate-tr {
+    background-color: #fffbeb !important;
+}

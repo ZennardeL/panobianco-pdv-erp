@@ -371,6 +371,35 @@ const server = http.createServer(async (req, res) => {
             return sendJson(res, 200, { success: true, state: db.getFullState() });
         }
 
+        // POST /api/product/delete — Excluir produto (🔒 ADMIN)
+        if ((pathname === '/api/product/delete' && req.method === 'POST') || (pathname.startsWith('/api/product/') && req.method === 'DELETE')) {
+            const session = requireAdmin(req, res);
+            if (!session) return;
+
+            let productId;
+            if (req.method === 'DELETE') {
+                productId = pathname.split('/')[3];
+            } else {
+                const body = await parseRequestBody(req);
+                productId = body.productId || body.id;
+            }
+
+            if (!productId) {
+                return sendJson(res, 400, { success: false, error: 'ID do produto obrigatório.' });
+            }
+
+            const product = db.getProductById(productId);
+            if (!product) {
+                return sendJson(res, 404, { success: false, error: 'Produto não encontrado.' });
+            }
+
+            db.deleteProduct(productId);
+            const adminName = `${session.user_name} [${session.user_code.toUpperCase()}]`;
+            db.logAudit('PRODUTO_EXCLUIDO', 'product', productId, session.user_id, adminName, `Produto excluído: ${product.name}`);
+
+            return sendJson(res, 200, { success: true, state: db.getFullState() });
+        }
+
         // POST /api/product/photo — Upload de foto (qualquer perfil autenticado)
         if (pathname === '/api/product/photo' && req.method === 'POST') {
             const session = requireAuth(req, res);
@@ -394,6 +423,28 @@ const server = http.createServer(async (req, res) => {
             db.logAudit('FOTO_ATUALIZADA', 'product', productId, session.user_id, operatorName, `Foto atualizada: ${product.name}`);
 
             return sendJson(res, 200, { success: true, product: { id: productId, image_path: imagePath }, state: db.getFullState() });
+        }
+
+        // POST /api/product/photo/remove — Remover foto do produto (qualquer perfil autenticado)
+        if (pathname === '/api/product/photo/remove' && req.method === 'POST') {
+            const session = requireAuth(req, res);
+            if (!session) return;
+
+            const { productId } = await parseRequestBody(req);
+            if (!productId) {
+                return sendJson(res, 400, { success: false, error: 'Produto obrigatório.' });
+            }
+
+            const product = db.getProductById(productId);
+            if (!product) {
+                return sendJson(res, 404, { success: false, error: 'Produto não encontrado.' });
+            }
+
+            db.removeProductPhoto(productId);
+            const operatorName = `${session.user_name} [${session.user_code.toUpperCase()}]`;
+            db.logAudit('FOTO_REMOVIDA', 'product', productId, session.user_id, operatorName, `Foto removida: ${product.name}`);
+
+            return sendJson(res, 200, { success: true, state: db.getFullState() });
         }
 
         // POST /api/shift/close — Fechamento de turno (qualquer perfil autenticado)

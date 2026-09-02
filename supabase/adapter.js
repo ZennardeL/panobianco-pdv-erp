@@ -131,7 +131,7 @@ class SupabaseAdapter {
         const shiftCounter = (counters || []).find(c => c.key === 'shift_counter')?.value || 0;
 
         return {
-            products: (products || []).map(p => ({
+            products: (products || []).filter(p => p.active !== false && p.active !== 0).map(p => ({
                 id: p.id,
                 name: p.name,
                 category: p.category,
@@ -273,6 +273,70 @@ class SupabaseAdapter {
 
         if (error) throw error;
         return data;
+    }
+
+    /**
+     * Excluir Produto do Catálogo no Supabase Cloud
+     */
+    async deleteProduct(productId, productName = '', operatorName = 'ADMIN', tenantId = 'default') {
+        if (!this.client) throw new Error('Supabase não conectado.');
+
+        // Tentar soft delete primeiro (coluna active = false)
+        const { error } = await this.client
+            .from('products')
+            .update({ active: false, updated_at: new Date().toISOString() })
+            .eq('id', productId)
+            .eq('tenant_id', tenantId);
+
+        if (error) {
+            // Se a coluna active não existir ou der erro, tenta delete físico
+            const { error: delErr } = await this.client
+                .from('products')
+                .delete()
+                .eq('id', productId)
+                .eq('tenant_id', tenantId);
+            if (delErr) throw delErr;
+        }
+
+        // Gravar auditoria
+        await this.client.from('audit_log').insert({
+            tenant_id: tenantId,
+            action: 'PRODUTO_EXCLUIDO',
+            entity_type: 'product',
+            entity_id: productId,
+            operator_id: 'admin',
+            operator_name: operatorName,
+            details: `Produto ${productName || productId} foi excluído do catálogo por ${operatorName}`
+        });
+
+        return true;
+    }
+
+    /**
+     * Remover Foto do Produto no Supabase Cloud
+     */
+    async removeProductPhoto(productId, productName = '', operatorName = 'ADMIN', tenantId = 'default') {
+        if (!this.client) throw new Error('Supabase não conectado.');
+
+        const { error } = await this.client
+            .from('products')
+            .update({ image_path: '', updated_at: new Date().toISOString() })
+            .eq('id', productId)
+            .eq('tenant_id', tenantId);
+
+        if (error) throw error;
+
+        await this.client.from('audit_log').insert({
+            tenant_id: tenantId,
+            action: 'FOTO_REMOVIDA',
+            entity_type: 'product',
+            entity_id: productId,
+            operator_id: 'admin',
+            operator_name: operatorName,
+            details: `Foto do produto ${productName || productId} removida por ${operatorName}`
+        });
+
+        return true;
     }
 
     /**

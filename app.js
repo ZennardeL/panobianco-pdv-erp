@@ -18,6 +18,7 @@ class PanobiancoApp {
         this.activeCategory = 'todas';
         this.tempQuickPhotoBase64 = null;
         this.tempProductPhotoBase64 = null;
+        this.stockSearchQuery = '';
         this.syncInterval = null;
         this.editingUserOriginalCode = null;
         
@@ -720,6 +721,47 @@ class PanobiancoApp {
     }
 
     /* ==================== MÓDULO 2: ESTOQUE & CADASTRO DE FOTOS ==================== */
+    filterStockTable(query) {
+        this.stockSearchQuery = (query || '').trim().toLowerCase();
+        this.renderStockTable();
+    }
+
+    detectDuplicateProducts() {
+        const products = this.state.products || [];
+        const groups = {};
+
+        const normalize = (str) => {
+            return (str || '')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/\b\d+\s*(ml|l|g|kg|mg|un|unidades|caps|doses)\b/gi, '')
+                .replace(/[^\w\s]/gi, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        };
+
+        products.forEach(p => {
+            const key = normalize(p.name);
+            if (!key) return;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(p);
+        });
+
+        const duplicateGroups = [];
+        for (const key in groups) {
+            if (groups[key].length > 1) {
+                duplicateGroups.push({
+                    normalizedKey: key,
+                    name: groups[key][0].name,
+                    items: groups[key]
+                });
+            }
+        }
+
+        return duplicateGroups;
+    }
+
     renderStockTable() {
         const tbody = document.getElementById('stock-table-body');
         if (!tbody) return;
@@ -742,47 +784,89 @@ class PanobiancoApp {
             `;
         }
 
+        const duplicateGroups = this.detectDuplicateProducts();
+        const duplicatePill = document.getElementById('duplicate-alert-pill');
+        const duplicateCountText = document.getElementById('duplicate-count-text');
+        
+        if (duplicatePill && duplicateCountText) {
+            if (duplicateGroups.length > 0 && isAdmin) {
+                const totalDuplicatesCount = duplicateGroups.reduce((acc, g) => acc + g.items.length, 0);
+                duplicateCountText.innerText = `${duplicateGroups.length} grupo(s) (${totalDuplicatesCount} itens duplicados)`;
+                duplicatePill.style.display = 'inline-flex';
+            } else {
+                duplicatePill.style.display = 'none';
+            }
+        }
+
+        const duplicateIdSet = new Set(duplicateGroups.flatMap(g => g.items.map(i => i.id)));
+
         let totalProducts = (this.state.products || []).length;
         let criticalCount = 0;
         let totalCostValue = 0;
         let totalPotentialRevenue = 0;
 
+        let filteredProducts = this.state.products || [];
+        if (this.stockSearchQuery) {
+            filteredProducts = filteredProducts.filter(p => 
+                (p.name || '').toLowerCase().includes(this.stockSearchQuery) ||
+                (p.category || '').toLowerCase().includes(this.stockSearchQuery)
+            );
+        }
+
         (this.state.products || []).forEach(prod => {
             totalCostValue += prod.cost * prod.stock;
             totalPotentialRevenue += prod.price * prod.stock;
             if (prod.stock <= prod.minStock) criticalCount++;
-
-            const margin = ((prod.price - prod.cost) / prod.price) * 100;
-            const tr = document.createElement('tr');
-
-            let statusBadge = `<span class="badge-status badge-ok">Normal (${prod.stock})</span>`;
-            if (prod.stock <= 0) {
-                statusBadge = `<span class="badge-status badge-cancel">Esgotado</span>`;
-            } else if (prod.stock <= prod.minStock) {
-                statusBadge = `<span class="badge-status" style="background:#fffbeb; color:#d97706;">Crítico (${prod.stock})</span>`;
-            }
-
-            const photoCell = prod.image
-                ? `<img src="${prod.image}" class="table-prod-photo-thumb" alt="${prod.name}">`
-                : `<div class="table-prod-emoji-thumb">${prod.icon || '📦'}</div>`;
-
-            tr.innerHTML = `
-                <td>${photoCell}</td>
-                <td><strong>${prod.name}</strong></td>
-                <td><span style="font-size:0.85em;font-weight:600;color:#475569;">${this.formatCategoryLabel(prod.category)}</span></td>
-                ${isAdmin ? `<td>R$ ${prod.cost.toFixed(2).replace('.', ',')}</td>` : ''}
-                <td><strong>R$ ${prod.price.toFixed(2).replace('.', ',')}</strong></td>
-                ${isAdmin ? `<td style="color: #10b981; font-weight: 700;">${margin.toFixed(0)}%</td>` : ''}
-                <td><strong>${prod.stock} un.</strong></td>
-                <td>${statusBadge}</td>
-                <td class="text-right">
-                    <button class="btn btn-sm btn-secondary" onclick="app.openQuickPhotoModal('${prod.id}')" title="Alterar Foto">📷 Foto</button>
-                    <button class="btn btn-sm btn-secondary" onclick="app.openRestockModal('${prod.id}')">➕ Entrada</button>
-                    ${isAdmin ? `<button class="btn btn-sm btn-secondary" onclick="app.editProduct('${prod.id}')">✏️</button>` : ''}
-                </td>
-            `;
-            tbody.appendChild(tr);
         });
+
+        if (filteredProducts.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="${isAdmin ? 9 : 7}" class="text-center" style="padding: 24px; color: #94a3b8;">
+                        Nenhum produto encontrado com o filtro atual.
+                    </td>
+                </tr>
+            `;
+        } else {
+            filteredProducts.forEach(prod => {
+                const margin = prod.price > 0 ? (((prod.price - prod.cost) / prod.price) * 100) : 0;
+                const isDuplicate = duplicateIdSet.has(prod.id);
+                const tr = document.createElement('tr');
+                if (isDuplicate) tr.className = 'highlight-duplicate-tr';
+
+                let statusBadge = `<span class="badge-status badge-ok">Normal (${prod.stock})</span>`;
+                if (prod.stock <= 0) {
+                    statusBadge = `<span class="badge-status badge-cancel">Esgotado</span>`;
+                } else if (prod.stock <= prod.minStock) {
+                    statusBadge = `<span class="badge-status" style="background:#fffbeb; color:#d97706;">Crítico (${prod.stock})</span>`;
+                }
+
+                const photoCell = prod.image
+                    ? `<img src="${prod.image}" class="table-prod-photo-thumb" alt="${prod.name}">`
+                    : `<div class="table-prod-emoji-thumb">${prod.icon || '📦'}</div>`;
+
+                tr.innerHTML = `
+                    <td>${photoCell}</td>
+                    <td>
+                        <strong>${prod.name}</strong>
+                        ${isDuplicate ? '<span class="badge badge-red" style="margin-left:6px;" title="Existe outro produto com nome similar">⚠️ Duplicado</span>' : ''}
+                    </td>
+                    <td><span style="font-size:0.85em;font-weight:600;color:#475569;">${this.formatCategoryLabel(prod.category)}</span></td>
+                    ${isAdmin ? `<td>R$ ${prod.cost.toFixed(2).replace('.', ',')}</td>` : ''}
+                    <td><strong>R$ ${prod.price.toFixed(2).replace('.', ',')}</strong></td>
+                    ${isAdmin ? `<td style="color: #10b981; font-weight: 700;">${margin.toFixed(0)}%</td>` : ''}
+                    <td><strong>${prod.stock} un.</strong></td>
+                    <td>${statusBadge}</td>
+                    <td class="text-right">
+                        <button class="btn btn-sm btn-secondary" onclick="app.openQuickPhotoModal('${prod.id}')" title="Alterar ou Remover Foto">📷 Foto</button>
+                        <button class="btn btn-sm btn-secondary" onclick="app.openRestockModal('${prod.id}')" title="Entrada de Estoque">➕ Entrada</button>
+                        ${isAdmin ? `<button class="btn btn-sm btn-secondary" onclick="app.editProduct('${prod.id}')" title="Editar Produto">✏️</button>` : ''}
+                        ${isAdmin ? `<button class="btn btn-sm btn-danger" onclick="app.confirmDeleteProduct('${prod.id}')" title="Excluir Produto">🗑️</button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
 
         if (isAdmin) {
             const elTot = document.getElementById('st-total-products');
@@ -828,16 +912,19 @@ class PanobiancoApp {
         const previewImg = document.getElementById('quick-photo-preview-img');
         const placeholder = document.getElementById('quick-photo-placeholder');
         const fileInput = document.getElementById('quick-photo-file-input');
+        const removeBtn = document.getElementById('btn-quick-remove-photo');
         if (fileInput) fileInput.value = '';
 
         if (prod.image) {
             previewImg.src = prod.image;
             previewImg.style.display = 'block';
             placeholder.style.display = 'none';
+            if (removeBtn) removeBtn.style.display = 'inline-flex';
         } else {
             previewImg.src = '';
             previewImg.style.display = 'none';
             placeholder.style.display = 'block';
+            if (removeBtn) removeBtn.style.display = 'none';
         }
 
         document.getElementById('quick-photo-modal').classList.add('active');
@@ -852,14 +939,15 @@ class PanobiancoApp {
             const file = input.files[0];
             const reader = new FileReader();
             reader.onload = (e) => {
-                // Comprime a imagem levemente em canvas para salvar espaço e transferir rápido
                 this.compressImage(e.target.result, 300, 300, (compressedBase64) => {
                     this.tempQuickPhotoBase64 = compressedBase64;
                     const previewImg = document.getElementById('quick-photo-preview-img');
                     const placeholder = document.getElementById('quick-photo-placeholder');
+                    const removeBtn = document.getElementById('btn-quick-remove-photo');
                     previewImg.src = compressedBase64;
                     previewImg.style.display = 'block';
                     placeholder.style.display = 'none';
+                    if (removeBtn) removeBtn.style.display = 'inline-flex';
                 });
             };
             reader.readAsDataURL(file);
@@ -889,9 +977,8 @@ class PanobiancoApp {
         }
 
         try {
-            const res = await fetch(`${this.API_BASE}/api/product/photo`, {
+            const res = await this.authFetch(`${this.API_BASE}/api/product/photo`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     productId: prodId,
                     imageBase64: this.tempQuickPhotoBase64
@@ -910,6 +997,54 @@ class PanobiancoApp {
                 prod.image = this.tempQuickPhotoBase64;
                 this.saveLocalState(this.state);
                 alert('✅ Foto salva localmente com sucesso!');
+            }
+        }
+
+        this.closeQuickPhotoModal();
+        this.renderAll();
+    }
+
+    async removeQuickPhoto() {
+        const prodId = document.getElementById('quick-photo-prod-id').value;
+        const prod = (this.state.products || []).find(p => p.id === prodId);
+        if (!prod) return;
+
+        if (!confirm(`🗑️ Deseja remover a foto de "${prod.name}" e voltar a exibir o ícone padrão?`)) return;
+
+        const opName = this.currentUser ? `${this.currentUser.name} [${this.currentUser.code.toUpperCase()}]` : 'Luan [F20729]';
+
+        if (this.useSupabase) {
+            try {
+                await supabaseAdapter.removeProductPhoto(prodId, prod.name, opName);
+                alert('✅ Foto removida com sucesso no Supabase Cloud!');
+                await this.syncWithSupabase(false);
+                this.closeQuickPhotoModal();
+                this.renderAll();
+                return;
+            } catch (e) {
+                console.error('❌ Erro ao remover foto:', e);
+                alert(`❌ Erro ao remover foto: ${e.message}`);
+                return;
+            }
+        }
+
+        try {
+            const res = await this.authFetch(`${this.API_BASE}/api/product/photo/remove`, {
+                method: 'POST',
+                body: JSON.stringify({ productId: prodId })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                this.state = data.state;
+                this.saveLocalState(data.state);
+                alert('✅ Foto removida com sucesso!');
+            }
+        } catch (e) {
+            if (prod) {
+                prod.image = '';
+                this.saveLocalState(this.state);
+                alert('✅ Foto removida localmente com sucesso!');
             }
         }
 
@@ -958,8 +1093,13 @@ class PanobiancoApp {
         
         const previewImg = document.getElementById('prod-photo-preview-img');
         const placeholder = document.getElementById('prod-photo-placeholder');
+        const removePhotoBtn = document.getElementById('btn-remove-prod-photo');
+        const deleteProdBtn = document.getElementById('btn-modal-delete-prod');
+
         previewImg.style.display = 'none';
         placeholder.style.display = 'block';
+        if (removePhotoBtn) removePhotoBtn.style.display = 'none';
+        if (deleteProdBtn) deleteProdBtn.style.display = 'none';
         this.tempProductPhotoBase64 = null;
 
         document.getElementById('product-modal').classList.add('active');
@@ -982,14 +1122,21 @@ class PanobiancoApp {
         
         const previewImg = document.getElementById('prod-photo-preview-img');
         const placeholder = document.getElementById('prod-photo-placeholder');
+        const removePhotoBtn = document.getElementById('btn-remove-prod-photo');
+        const deleteProdBtn = document.getElementById('btn-modal-delete-prod');
+
+        if (deleteProdBtn) deleteProdBtn.style.display = 'inline-flex';
+
         if (prod.image) {
             previewImg.src = prod.image;
             previewImg.style.display = 'block';
             placeholder.style.display = 'none';
+            if (removePhotoBtn) removePhotoBtn.style.display = 'inline-flex';
             this.tempProductPhotoBase64 = prod.image;
         } else {
             previewImg.style.display = 'none';
             placeholder.style.display = 'block';
+            if (removePhotoBtn) removePhotoBtn.style.display = 'none';
             this.tempProductPhotoBase64 = null;
         }
 
@@ -1005,13 +1152,33 @@ class PanobiancoApp {
                     this.tempProductPhotoBase64 = compressedBase64;
                     const previewImg = document.getElementById('prod-photo-preview-img');
                     const placeholder = document.getElementById('prod-photo-placeholder');
+                    const removePhotoBtn = document.getElementById('btn-remove-prod-photo');
                     previewImg.src = compressedBase64;
                     previewImg.style.display = 'block';
                     placeholder.style.display = 'none';
+                    if (removePhotoBtn) removePhotoBtn.style.display = 'inline-flex';
                 });
             };
             reader.readAsDataURL(file);
         }
+    }
+
+    removeProductPhotoFromModal() {
+        this.tempProductPhotoBase64 = '';
+        document.getElementById('edit-prod-image').value = '';
+        const fileInput = document.getElementById('prod-photo-input');
+        if (fileInput) fileInput.value = '';
+
+        const previewImg = document.getElementById('prod-photo-preview-img');
+        const placeholder = document.getElementById('prod-photo-placeholder');
+        const removeBtn = document.getElementById('btn-remove-prod-photo');
+
+        if (previewImg) {
+            previewImg.src = '';
+            previewImg.style.display = 'none';
+        }
+        if (placeholder) placeholder.style.display = 'block';
+        if (removeBtn) removeBtn.style.display = 'none';
     }
 
     async saveProduct() {
@@ -1023,7 +1190,7 @@ class PanobiancoApp {
         const price = parseFloat(document.getElementById('prod-price').value) || 0;
         const stock = parseInt(document.getElementById('prod-stock').value) || 0;
         const minStock = parseInt(document.getElementById('prod-min-stock').value) || 5;
-        const image = this.tempProductPhotoBase64 || document.getElementById('edit-prod-image').value || '';
+        const image = this.tempProductPhotoBase64 !== null ? this.tempProductPhotoBase64 : (document.getElementById('edit-prod-image').value || '');
 
         if (!name || price <= 0) {
             alert('⚠️ Preencha o nome e o preço de venda corretamente.');
@@ -1054,9 +1221,8 @@ class PanobiancoApp {
         }
 
         try {
-            const res = await fetch(`${this.API_BASE}/api/product`, {
+            const res = await this.authFetch(`${this.API_BASE}/api/product`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(productPayload)
             });
             if (res.ok) {
@@ -1075,6 +1241,196 @@ class PanobiancoApp {
         this.saveLocalState(this.state);
         this.closeProductModal();
         this.renderAll();
+    }
+
+    async confirmDeleteProduct(productId) {
+        const prod = (this.state.products || []).find(p => p.id === productId);
+        if (!prod) return;
+
+        const confirmMsg = `⚠️ ATENÇÃO: Deseja EXCLUIR o produto abaixo?\n\n` +
+            `📦 ${prod.name}\n` +
+            `💰 Preço: R$ ${prod.price.toFixed(2).replace('.', ',')} | Estoque: ${prod.stock} un.\n\n` +
+            `Esta ação removerá o produto do catálogo e da frente de caixa.`;
+
+        if (!confirm(confirmMsg)) return;
+
+        await this.deleteProductById(productId, prod.name);
+    }
+
+    async deleteCurrentEditingProduct() {
+        const id = document.getElementById('edit-prod-id').value;
+        const name = document.getElementById('prod-name').value;
+        if (!id) return;
+
+        if (!confirm(`⚠️ Deseja excluir permanentemente o produto "${name}"?`)) return;
+
+        this.closeProductModal();
+        await this.deleteProductById(id, name);
+    }
+
+    async deleteProductById(productId, productName = '') {
+        const opName = this.currentUser ? `${this.currentUser.name} [${this.currentUser.code.toUpperCase()}]` : 'Luan [F20729]';
+
+        if (this.useSupabase) {
+            try {
+                await supabaseAdapter.deleteProduct(productId, productName, opName);
+                alert(`✅ Produto "${productName || productId}" excluído com sucesso do Supabase Cloud!`);
+                await this.syncWithSupabase(false);
+                this.renderAll();
+                return;
+            } catch (err) {
+                console.error('❌ Erro ao excluir produto no Supabase:', err);
+                alert(`❌ Erro ao excluir produto: ${err.message || err}`);
+                return;
+            }
+        }
+
+        try {
+            const res = await this.authFetch(`${this.API_BASE}/api/product/delete`, {
+                method: 'POST',
+                body: JSON.stringify({ productId })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                this.state = data.state;
+                this.saveLocalState(data.state);
+                alert(`✅ Produto "${productName}" excluído com sucesso!`);
+            } else {
+                const data = await res.json();
+                alert(`❌ ${data.error || 'Erro ao excluir produto.'}`);
+            }
+        } catch (e) {
+            this.state.products = (this.state.products || []).filter(p => p.id !== productId);
+            this.saveLocalState(this.state);
+            alert(`✅ Produto excluído localmente com sucesso!`);
+        }
+
+        this.renderAll();
+    }
+
+    /* ==================== GESTÃO DE DUPLICADOS ==================== */
+    openDuplicatesModal() {
+        this.renderDuplicatesList();
+        document.getElementById('duplicates-modal').classList.add('active');
+    }
+
+    closeDuplicatesModal() {
+        document.getElementById('duplicates-modal').classList.remove('active');
+    }
+
+    renderDuplicatesList() {
+        const container = document.getElementById('duplicates-list-container');
+        if (!container) return;
+
+        const duplicateGroups = this.detectDuplicateProducts();
+
+        if (duplicateGroups.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 28px; color: #64748b;">
+                    <div style="font-size: 32pt; margin-bottom: 8px;">✨</div>
+                    <strong style="color: #0f172a; font-size: 11pt;">Nenhum produto duplicado encontrado!</strong>
+                    <p style="font-size: 9pt; margin-top: 4px;">Seu catálogo está organizado e sem redundâncias.</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        duplicateGroups.forEach((group, gIdx) => {
+            html += `
+                <div class="duplicate-group-card">
+                    <div class="duplicate-group-header">
+                        <div class="duplicate-group-title">
+                            📌 Grupo ${gIdx + 1}: <span>"${group.name}"</span> (${group.items.length} itens)
+                        </div>
+                    </div>
+            `;
+
+            group.items.forEach((item, itemIdx) => {
+                const isFirst = itemIdx === 0;
+                const photoDisplay = item.image 
+                    ? `<img src="${item.image}" class="table-prod-photo-thumb" style="width:28px;height:28px;" alt="${item.name}">` 
+                    : `<span style="font-size: 14pt;">${item.icon || '📦'}</span>`;
+
+                html += `
+                    <div class="duplicate-item-row" style="${isFirst ? 'border-left: 4px solid var(--primary);' : ''}">
+                        <div class="duplicate-item-info">
+                            ${photoDisplay}
+                            <div>
+                                <strong style="color: #0f172a; font-size: 9pt;">${item.name}</strong> ${isFirst ? '<span class="badge badge-blue">Principal</span>' : ''}
+                                <div style="font-size: 7.5pt; color: #64748b; margin-top: 2px;">
+                                    ID: <code>${item.id}</code> &bull; Estoque: <strong>${item.stock} un</strong> &bull; Venda: <strong>R$ ${item.price.toFixed(2).replace('.', ',')}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="duplicate-item-actions">
+                            ${!isFirst ? `
+                                <button class="btn btn-sm btn-primary" onclick="app.mergeDuplicateItem('${group.items[0].id}', '${item.id}')" title="Somar estoque deste item no principal e excluí-lo">
+                                    🔄 Mesclar c/ Principal
+                                </button>
+                            ` : ''}
+                            <button class="btn btn-sm btn-danger" onclick="app.deleteDuplicateItem('${item.id}', '${item.name}')" title="Excluir este item duplicado">
+                                🗑️ Excluir
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+        });
+
+        container.innerHTML = html;
+    }
+
+    async deleteDuplicateItem(productId, productName) {
+        if (!confirm(`🗑️ Excluir a duplicata "${productName}" (ID: ${productId})?`)) return;
+        await this.deleteProductById(productId, productName);
+        this.renderDuplicatesList();
+    }
+
+    async mergeDuplicateItem(primaryId, duplicateId) {
+        const primary = (this.state.products || []).find(p => p.id === primaryId);
+        const duplicate = (this.state.products || []).find(p => p.id === duplicateId);
+        if (!primary || !duplicate) return;
+
+        const confirmMsg = `🔄 Deseja MESCLAR "${duplicate.name}" no produto principal "${primary.name}"?\n\n` +
+            `• O estoque de ${duplicate.stock} unidades será SOMADO ao produto principal (novo estoque: ${primary.stock + duplicate.stock} un).\n` +
+            `• A duplicata (ID: ${duplicate.id}) será excluída automaticamente.`;
+
+        if (!confirm(confirmMsg)) return;
+
+        const addedQty = duplicate.stock;
+        primary.stock += addedQty;
+
+        if (!primary.image && duplicate.image) {
+            primary.image = duplicate.image;
+        }
+
+        if (this.useSupabase) {
+            await supabaseAdapter.upsertProduct(primary);
+            await supabaseAdapter.deleteProduct(duplicateId, duplicate.name, this.currentUser ? this.currentUser.name : 'ADMIN');
+            await this.syncWithSupabase(false);
+        } else {
+            try {
+                await this.authFetch(`${this.API_BASE}/api/product`, {
+                    method: 'POST',
+                    body: JSON.stringify(primary)
+                });
+                await this.authFetch(`${this.API_BASE}/api/product/delete`, {
+                    method: 'POST',
+                    body: JSON.stringify({ productId: duplicateId })
+                });
+            } catch (e) {
+                this.state.products = this.state.products.filter(p => p.id !== duplicateId);
+                this.saveLocalState(this.state);
+            }
+        }
+
+        alert(`✅ Mesclagem concluída com sucesso!\nEstoque atual do produto principal: ${primary.stock} unidades.`);
+        this.renderAll();
+        this.renderDuplicatesList();
     }
 
     closeProductModal() {

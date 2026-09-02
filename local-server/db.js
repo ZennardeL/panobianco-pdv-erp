@@ -140,6 +140,18 @@ function updateProductStock(productId, delta, tenantId = 'default') {
     ).run(delta, productId, tenantId);
 }
 
+function deleteProduct(productId, tenantId = 'default') {
+    return getDb().prepare(
+        'UPDATE products SET active = 0, updated_at = datetime(\'now\') WHERE id = ? AND tenant_id = ?'
+    ).run(productId, tenantId);
+}
+
+function removeProductPhoto(productId, tenantId = 'default') {
+    return getDb().prepare(
+        'UPDATE products SET image_path = \'\', updated_at = datetime(\'now\') WHERE id = ? AND tenant_id = ?'
+    ).run(productId, tenantId);
+}
+
 // ==========================================================================
 // QUERIES — SALES
 // ==========================================================================
@@ -673,7 +685,9 @@ module.exports = {
     getProductById,
     upsertProduct,
     updateProductPhoto,
+    removeProductPhoto,
     updateProductStock,
+    deleteProduct,
 
     // Sales
     getNextSaleSeq,
