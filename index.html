@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panobianco - PDV & ERP da Lojinha</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -56,7 +59,7 @@
                     <h1>PANOBIANCO <span>PDV & ERP</span></h1>
                     <span class="unit-tag">Unidade Franquia</span>
                 </div>
-                <span id="sync-status-badge" class="sync-badge online" style="cursor: pointer;" onclick="app.openSupabaseModal()" title="Clique para configurar o Supabase Cloud Realtime">🟢 PC Recepção 24h</span>
+                <span id="sync-status-badge" class="sync-badge online" style="cursor: default;" title="Conexão Segura em Nuvem Ativa (Realtime)">🟢 Nuvem Conectada (Realtime)</span>
             </div>
 
             <!-- Navegação entre Telas -->
@@ -702,8 +705,8 @@
         </div>
     </div>
 
-    <!-- Modal: Adicionar Entrada de Estoque -->
-    <div id="restock-modal" class="modal-overlay">
+    <!-- Modal: Adicionar Entrada de Estoque (Apenas ADMIN) -->
+    <div id="restock-modal" class="modal-overlay admin-only">
         <div class="modal-card">
             <div class="modal-header">
                 <h3>📦 Entrada de Estoque (Reposição)</h3>
@@ -808,8 +811,8 @@
         </div>
     </div>
 
-    <!-- Modal: Configuração da Nuvem Supabase -->
-    <div id="supabase-config-modal" class="modal-overlay">
+    <!-- Modal: Configuração da Nuvem Supabase (Apenas ADMIN) -->
+    <div id="supabase-config-modal" class="modal-overlay admin-only">
         <div class="modal-card" style="max-width: 500px;">
             <div class="modal-header">
                 <h3>⚡ Configuração do Supabase Cloud (Realtime)</h3>

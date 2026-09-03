@@ -166,25 +166,27 @@ class PanobiancoApp {
     updateSyncBadge(online, isSupabase = this.useSupabase) {
         let badge = document.getElementById('sync-status-badge');
         if (badge) {
+            badge.style.cursor = 'default';
+            badge.removeAttribute('onclick');
             if (isSupabase) {
                 if (online) {
-                    badge.innerHTML = '⚡ Supabase Cloud Realtime';
+                    badge.innerHTML = '🟢 Nuvem Conectada (Realtime)';
                     badge.className = 'sync-badge online';
-                    badge.title = 'Conectado em tempo real com o Supabase Cloud (WebSockets ativos)';
+                    badge.title = 'Conexão Segura em Nuvem Ativa (Realtime)';
                 } else {
-                    badge.innerHTML = '🟡 Supabase Reconectando...';
+                    badge.innerHTML = '🟡 Reconectando Nuvem...';
                     badge.className = 'sync-badge offline';
-                    badge.title = 'Tentando reconectar com a nuvem Supabase.';
+                    badge.title = 'Tentando restabelecer conexão com a nuvem.';
                 }
             } else {
                 if (online) {
-                    badge.innerHTML = '🟢 PC Recepção 24h';
+                    badge.innerHTML = '🟢 Conexão Local Ativa';
                     badge.className = 'sync-badge online';
-                    badge.title = 'Conectado e sincronizado com o PC da Recepção 24h';
+                    badge.title = 'Conectado ao servidor local';
                 } else {
-                    badge.innerHTML = '🟡 Modo Local';
+                    badge.innerHTML = '🟡 Modo Offline';
                     badge.className = 'sync-badge offline';
-                    badge.title = 'Operando localmente. Sincronizará com o PC 24h.';
+                    badge.title = 'Operando localmente';
                 }
             }
         }
@@ -859,7 +861,7 @@ class PanobiancoApp {
                     <td>${statusBadge}</td>
                     <td class="text-right">
                         <button class="btn btn-sm btn-secondary" onclick="app.openQuickPhotoModal('${prod.id}')" title="Alterar ou Remover Foto">📷 Foto</button>
-                        <button class="btn btn-sm btn-secondary" onclick="app.openRestockModal('${prod.id}')" title="Entrada de Estoque">➕ Entrada</button>
+                        ${isAdmin ? `<button class="btn btn-sm btn-secondary" onclick="app.openRestockModal('${prod.id}')" title="Entrada de Estoque">➕ Entrada</button>` : ''}
                         ${isAdmin ? `<button class="btn btn-sm btn-secondary" onclick="app.editProduct('${prod.id}')" title="Editar Produto">✏️</button>` : ''}
                         ${isAdmin ? `<button class="btn btn-sm btn-danger" onclick="app.confirmDeleteProduct('${prod.id}')" title="Excluir Produto">🗑️</button>` : ''}
                     </td>
@@ -1438,6 +1440,10 @@ class PanobiancoApp {
     }
 
     openRestockModal(productId) {
+        if (!this.currentUser || this.currentUser.role !== 'ADMIN') {
+            alert('⚠️ Acesso restrito: Apenas administradores podem dar entrada no estoque.');
+            return;
+        }
         const prod = (this.state.products || []).find(p => p.id === productId);
         if (!prod) return;
         document.getElementById('restock-prod-id').value = prod.id;
@@ -1447,6 +1453,10 @@ class PanobiancoApp {
     }
 
     async confirmRestock() {
+        if (!this.currentUser || this.currentUser.role !== 'ADMIN') {
+            alert('⚠️ Acesso restrito: Apenas administradores podem dar entrada no estoque.');
+            return;
+        }
         const id = document.getElementById('restock-prod-id').value;
         const qty = parseInt(document.getElementById('restock-qty').value) || 0;
         if (qty <= 0) {
@@ -2499,14 +2509,20 @@ class PanobiancoApp {
         if (detailEl) detailEl.textContent = parts.join(' | ');
     }
 
-    /* ==================== CONFIGURAÇÃO SUPABASE CLOUD ==================== */
+    /* ==================== CONFIGURAÇÃO SUPABASE CLOUD (ADMIN ONLY) ==================== */
     openSupabaseModal() {
+        if (!this.currentUser || this.currentUser.role !== 'ADMIN') {
+            return;
+        }
         const urlInput = document.getElementById('cfg-supabase-url');
         const keyInput = document.getElementById('cfg-supabase-key');
         const resEl = document.getElementById('supabase-test-result');
 
-        if (urlInput) urlInput.value = localStorage.getItem('panobianco_supabase_url') || (SUPABASE_CONFIG.url.includes('SUA-URL') ? '' : SUPABASE_CONFIG.url);
-        if (keyInput) keyInput.value = localStorage.getItem('panobianco_supabase_key') || (SUPABASE_CONFIG.anonKey.includes('SUA-ANON') ? '' : SUPABASE_CONFIG.anonKey);
+        if (urlInput) urlInput.value = 'https://jawrukqnncnjgzixjaqy.supabase.co';
+        if (keyInput) {
+            keyInput.value = '';
+            keyInput.placeholder = '•••••••••••••••••••••••••••••••• (Configurada e Segura)';
+        }
         if (resEl) resEl.style.display = 'none';
 
         document.getElementById('supabase-config-modal').classList.add('active');
@@ -2517,39 +2533,33 @@ class PanobiancoApp {
     }
 
     async testSupabaseConnection() {
+        if (!this.currentUser || this.currentUser.role !== 'ADMIN') return;
         const url = document.getElementById('cfg-supabase-url').value.trim();
-        const key = document.getElementById('cfg-supabase-key').value.trim();
+        const key = document.getElementById('cfg-supabase-key').value.trim() || SUPABASE_CONFIG.anonKey;
         const resEl = document.getElementById('supabase-test-result');
         if (!resEl) return;
-
-        if (!url || !key) {
-            resEl.innerHTML = '<span style="color:#ef4444;">⚠️ Preencha a URL e a Anon Key do Supabase.</span>';
-            resEl.style.display = 'block';
-            return;
-        }
 
         resEl.innerHTML = '<span style="color:#3b82f6;">⏳ Testando conexão com o Supabase Cloud...</span>';
         resEl.style.display = 'block';
 
         try {
-            const testClient = supabase.createClient(url, key);
+            const testClient = supabase.createClient(url.includes('••••') ? SUPABASE_CONFIG.url : url, key);
             const { data, error } = await testClient.from('tenants').select('id, name').limit(1);
             if (error) throw error;
 
-            resEl.innerHTML = '<span style="color:#16a34a; font-weight:bold;">✅ Conexão bem-sucedida! PostgreSQL e Realtime prontos.</span>';
+            resEl.innerHTML = '<span style="color:#16a34a; font-weight:bold;">✅ Conexão bem-sucedida! PostgreSQL e Realtime ativos.</span>';
         } catch (err) {
             resEl.innerHTML = `<span style="color:#ef4444;">❌ Falha na conexão: ${err.message || err}</span>`;
         }
     }
 
     async saveSupabaseConfig() {
-        const url = document.getElementById('cfg-supabase-url').value.trim();
-        const key = document.getElementById('cfg-supabase-key').value.trim();
+        if (!this.currentUser || this.currentUser.role !== 'ADMIN') return;
+        let url = document.getElementById('cfg-supabase-url').value.trim();
+        let key = document.getElementById('cfg-supabase-key').value.trim();
 
-        if (!url || !key) {
-            alert('⚠️ Preencha a URL e a Anon Key do Supabase.');
-            return;
-        }
+        if (url.includes('••••') || !url) url = SUPABASE_CONFIG.url;
+        if (!key) key = SUPABASE_CONFIG.anonKey;
 
         localStorage.setItem('panobianco_supabase_url', url);
         localStorage.setItem('panobianco_supabase_key', key);
@@ -2562,7 +2572,7 @@ class PanobiancoApp {
             await this.syncWithSupabase(true);
             supabaseAdapter.subscribeRealtime((type, payload) => this.handleRealtimeUpdate(type, payload));
             this.updateSyncBadge(true, true);
-            alert('🎉 Supabase Cloud conectado com sucesso! O sistema agora está sincronizado em tempo real na nuvem.');
+            alert('🎉 Supabase Cloud conectado com sucesso!');
             this.closeSupabaseModal();
         } else {
             alert('❌ Erro ao inicializar o Supabase com as credenciais informadas.');
