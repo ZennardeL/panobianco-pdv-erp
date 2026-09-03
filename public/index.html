@@ -300,7 +300,11 @@
                             <h3>📎 Vias da Maquininha Deste Turno (Conferência de Grampos)</h3>
                             <p>Verifique se cada filipeta de cartão/Pix grampeada no caixa impresso do EVO bate com o código da lista:</p>
                         </div>
-                        <span class="slips-counter-badge" id="slips-card-counter">0 vias de cartão/Pix</span>
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                            <input type="text" id="slips-search-input" placeholder="🔍 Filtrar via (ex: V30, Pix...)" style="padding: 6px 10px; font-size: 8.5pt; border: 1px solid #cbd5e1; border-radius: 6px;" oninput="app.filterShiftSlips(this.value)">
+                            <button class="btn btn-sm btn-secondary" id="toggle-slips-expand-btn" onclick="app.toggleSlipsExpand()" title="Expandir/Recolher tabela de vendas">↕️ Expandir / Ver Todas</button>
+                            <span class="slips-counter-badge" id="slips-card-counter">0 vias de cartão/Pix</span>
+                        </div>
                     </div>
 
                     <div class="slips-table-wrapper">
@@ -369,10 +373,17 @@
                             </div>
                             <div id="blind-result-box" class="reconcile-box" style="display: none;"></div>
                         </div>
+
+                        <button class="btn btn-sm btn-secondary" onclick="app.openShiftDetailsModal('active')" style="margin-top: 12px; width: 100%;">
+                            🔍 Ver Todas as Vendas Deste Turno em Detalhes
+                        </button>
                     </div>
 
                     <div class="history-card">
-                        <h3>📜 Histórico de Fechamentos Anteriores</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1.5px solid var(--border-color); padding-bottom: 8px;">
+                            <h3 style="margin: 0; border: none; padding: 0;">📜 Histórico de Fechamentos Anteriores</h3>
+                            <small style="color: #ea580c; font-weight: 600; font-size: 7.5pt;">(Clique no turno p/ ver vendas e reimprimir)</small>
+                        </div>
                         <div class="history-list" id="shift-history-list">
                             <!-- Inserido dinamicamente -->
                         </div>
@@ -700,6 +711,79 @@
                 <div style="display: flex; gap: 8px; margin-left: auto;">
                     <button class="btn btn-secondary" onclick="app.closeQuickPhotoModal()">Cancelar</button>
                     <button class="btn btn-primary" onclick="app.saveQuickPhoto()">Salvar Foto</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Detalhes do Turno Fechado e Todas as Vendas -->
+    <div id="shift-details-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 880px; width: 95%;">
+            <div class="modal-header">
+                <div>
+                    <h3 id="shift-modal-title" style="margin: 0; font-size: 13pt;">📋 Detalhes do Turno & Vendas</h3>
+                    <p id="shift-modal-subtitle" style="margin: 3px 0 0 0; font-size: 8.5pt; color: #64748b;"></p>
+                </div>
+                <button class="close-btn" onclick="app.closeShiftDetailsModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 68vh; overflow-y: auto;">
+                <!-- Cards de Resumo do Turno -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px;">
+                    <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 10px;">
+                        <span style="font-size: 7.5pt; color: #9a3412; font-weight: 700; text-transform: uppercase;">Faturamento Total</span>
+                        <div id="shift-modal-kpi-total" style="font-size: 13pt; font-weight: 800; color: #ea580c; margin-top: 4px;">R$ 0,00</div>
+                    </div>
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px;">
+                        <span style="font-size: 7.5pt; color: #166534; font-weight: 700; text-transform: uppercase;">Total de Vendas</span>
+                        <div id="shift-modal-kpi-sales-count" style="font-size: 13pt; font-weight: 800; color: #16a34a; margin-top: 4px;">0 vendas</div>
+                    </div>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px;">
+                        <span style="font-size: 7.5pt; color: #475569; font-weight: 700; text-transform: uppercase;">Dinheiro em Gaveta</span>
+                        <div id="shift-modal-kpi-cash" style="font-size: 11pt; font-weight: 800; color: #0f172a; margin-top: 4px;">R$ 0,00</div>
+                        <small id="shift-modal-kpi-diff" style="font-size: 7pt; color: #64748b;"></small>
+                    </div>
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px;">
+                        <span style="font-size: 7.5pt; color: #1e40af; font-weight: 700; text-transform: uppercase;">Cartões & Pix (Vias)</span>
+                        <div id="shift-modal-kpi-cardpix" style="font-size: 11pt; font-weight: 800; color: #2563eb; margin-top: 4px;">R$ 0,00</div>
+                    </div>
+                </div>
+
+                <!-- Barra de Busca de Vendas do Turno -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 10px; flex-wrap: wrap;">
+                    <h4 style="margin: 0; font-size: 10pt; color: #0f172a;">🧾 Todas as Vendas Deste Turno:</h4>
+                    <input type="text" id="shift-modal-search" placeholder="🔍 Filtrar por código (V01), produto, pagamento..." 
+                           style="padding: 6px 12px; font-size: 8.5pt; border: 1px solid #cbd5e1; border-radius: 6px; width: 280px;" 
+                           oninput="app.filterShiftModalSales(this.value)">
+                </div>
+
+                <!-- Tabela com TODAS as Vendas -->
+                <div class="table-card" style="box-shadow: none; border: 1px solid #e2e8f0;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 75px;">Cód.</th>
+                                <th style="width: 75px;">Horário</th>
+                                <th style="width: 120px;">Forma Pagto</th>
+                                <th style="width: 95px;">Valor (R$)</th>
+                                <th>Itens Vendidos</th>
+                                <th style="width: 90px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shift-modal-sales-tbody">
+                            <!-- Preenchido dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <button class="btn btn-secondary" onclick="app.closeShiftDetailsModal()">Fechar</button>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button class="btn btn-secondary" id="btn-export-shift-csv" onclick="app.exportCurrentModalShiftCSV()">
+                        📥 Exportar CSV
+                    </button>
+                    <button class="btn btn-primary" id="btn-print-shift-evo" onclick="app.printCurrentModalShift()">
+                        🖨️ Reimprimir Espelho de Caixa (Padrão EVO)
+                    </button>
                 </div>
             </div>
         </div>

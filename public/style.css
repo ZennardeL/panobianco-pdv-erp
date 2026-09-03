@@ -906,8 +906,13 @@ body {
 }
 
 .slips-table-wrapper {
-    max-height: 260px;
+    max-height: 480px;
     overflow-y: auto;
+    transition: max-height 0.3s ease;
+}
+
+.slips-table-wrapper.expanded {
+    max-height: 1200px;
 }
 
 .slip-code-tag {
@@ -1287,6 +1292,15 @@ body {
     border-radius: var(--radius-sm);
     padding: 10px 12px;
     font-size: 8pt;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.shift-history-item:hover {
+    background: #fff7ed;
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(234, 88, 12, 0.15);
+    transform: translateY(-1px);
 }
 
 .sh-header {

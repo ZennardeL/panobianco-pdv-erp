@@ -1519,8 +1519,9 @@ class PanobiancoApp {
         document.getElementById('shift-operator-name').innerText = currentName;
         document.getElementById('shift-start-time').innerText = new Date(shift.startTime).toLocaleString('pt-BR');
         
-        const shiftSales = shift.sales || [];
-        document.getElementById('shift-sales-count').innerText = `${shiftSales.length} vendas registradas`;
+        let shiftSales = shift.sales || [];
+        const totalShiftSalesCount = shiftSales.length;
+        document.getElementById('shift-sales-count').innerText = `${totalShiftSalesCount} vendas registradas`;
 
         let pix = 0, card = 0, cash = 0;
         let cardPixCount = 0;
@@ -1546,30 +1547,43 @@ class PanobiancoApp {
         document.getElementById('shift-val-cash').innerText = `R$ ${cash.toFixed(2).replace('.', ',')}`;
         document.getElementById('shift-val-total').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
 
+        // Filtro em tempo real das vias da tabela
+        if (this.slipsFilterQuery) {
+            const q = this.slipsFilterQuery;
+            shiftSales = shiftSales.filter(s => 
+                s.id.toLowerCase().includes(q) ||
+                (s.paymentMethod && s.paymentMethod.toLowerCase().includes(q)) ||
+                (s.operatorName && s.operatorName.toLowerCase().includes(q)) ||
+                (s.items || []).some(it => it.name.toLowerCase().includes(q))
+            );
+        }
+
         const slipsBody = document.getElementById('shift-slips-table-body');
         const slipsCounter = document.getElementById('slips-card-counter');
         
         if (slipsCounter) {
-            slipsCounter.innerText = `${cardPixCount} via(s) de Cartão/Pix para grampear no EVO`;
+            slipsCounter.innerText = `${cardPixCount} via(s) de Cartão/Pix (${totalShiftSalesCount} vendas totais)`;
         }
 
         if (slipsBody) {
             slipsBody.innerHTML = '';
             if (shiftSales.length === 0) {
-                slipsBody.innerHTML = '<tr><td colspan="7" class="text-center" style="color:#94a3b8; padding: 14px;">Nenhuma venda realizada neste turno até o momento.</td></tr>';
+                slipsBody.innerHTML = `<tr><td colspan="7" class="text-center" style="color:#94a3b8; padding: 14px;">
+                    ${this.slipsFilterQuery ? 'Nenhuma via encontrada para o filtro buscado.' : 'Nenhuma venda realizada neste turno até o momento.'}
+                </td></tr>`;
             } else {
                 shiftSales.forEach(s => {
                     const tr = document.createElement('tr');
-                    const itemsText = s.items.map(it => `${it.qty}x ${it.name}`).join(', ');
+                    const itemsText = (s.items || []).map(it => `${it.qty}x ${it.name}`).join(', ');
                     const isCardOrPix = s.paymentMethod !== 'dinheiro';
 
                     tr.innerHTML = `
                         <td><span class="slip-code-tag">${s.id}</span></td>
-                        <td>${s.dateFormatted || '--:--'}</td>
-                        <td><strong>${s.paymentMethod.toUpperCase()}</strong></td>
-                        <td><strong>R$ ${s.total.toFixed(2).replace('.', ',')}</strong></td>
+                        <td>${s.dateFormatted || (s.timestamp ? new Date(s.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--')}</td>
+                        <td><strong>${(s.paymentMethod || '').toUpperCase().replace('_', ' ')}</strong></td>
+                        <td><strong>R$ ${Number(s.total).toFixed(2).replace('.', ',')}</strong></td>
                         <td><small>${itemsText}</small></td>
-                        <td>${s.operatorName}</td>
+                        <td>${s.operatorName || '-'}</td>
                         <td>
                             ${isCardOrPix 
                                 ? `<span class="badge badge-blue">📎 Grampear Via #${s.id}</span>` 
@@ -1582,6 +1596,22 @@ class PanobiancoApp {
         }
 
         this.renderShiftHistory();
+    }
+
+    filterShiftSlips(query) {
+        this.slipsFilterQuery = (query || '').toLowerCase().trim();
+        this.renderShiftModule();
+    }
+
+    toggleSlipsExpand() {
+        const wrapper = document.querySelector('.slips-table-wrapper');
+        const btn = document.getElementById('toggle-slips-expand-btn');
+        if (wrapper) {
+            wrapper.classList.toggle('expanded');
+            if (btn) {
+                btn.innerText = wrapper.classList.contains('expanded') ? '🔼 Recolher Tabela' : '↕️ Expandir / Ver Todas';
+            }
+        }
     }
 
     async reconcileShift() {
@@ -1654,34 +1684,223 @@ class PanobiancoApp {
         if (!container) return;
         container.innerHTML = '';
 
-        if (!this.state.shifts || this.state.shifts.length === 0) {
+        const shifts = this.state.shifts || [];
+        if (shifts.length === 0) {
             container.innerHTML = '<p style="color:#94a3b8; font-size:8.5pt;">Nenhum turno fechado anteriormente.</p>';
             return;
         }
 
-        this.state.shifts.slice(0, 8).forEach(sh => {
+        shifts.forEach(sh => {
             const item = document.createElement('div');
             item.className = 'shift-history-item';
+            item.style.cursor = 'pointer';
+            item.title = `Clique para abrir todas as vendas e detalhes do Turno ${sh.shiftCode || ''}`;
+            item.onclick = () => this.openShiftDetailsModal(sh.id);
+
+            const salesCount = (sh.sales && sh.sales.length) || sh.totalSales || 0;
+            const diffText = sh.diff === 0 
+                ? 'Exato' 
+                : (sh.diff > 0 ? '+R$' + sh.diff.toFixed(2).replace('.', ',') : '-R$' + Math.abs(sh.diff).toFixed(2).replace('.', ','));
+
             item.innerHTML = `
                 <div class="sh-header">
-                    <span>${sh.shiftCode || 'Turno'} - ${sh.operatorName}</span>
-                    <span style="color: #ea580c;">R$ ${sh.totalRevenue.toFixed(2).replace('.', ',')}</span>
+                    <span>${sh.shiftCode || 'Turno'} — ${sh.operatorName}</span>
+                    <span style="color: #ea580c; font-weight: 800;">R$ ${Number(sh.totalRevenue).toFixed(2).replace('.', ',')}</span>
                 </div>
-                <div style="color: #64748b; font-size: 7.5pt;">
+                <div style="color: #64748b; font-size: 7.5pt; margin-bottom: 6px;">
                     📅 Fechamento: ${new Date(sh.endTime).toLocaleString('pt-BR')}<br>
-                    Vendas: ${sh.totalSales} | Gaveta: R$ ${sh.countedCash.toFixed(2).replace('.', ',')} 
-                    (${sh.diff === 0 ? 'Exato' : (sh.diff > 0 ? '+R$' + sh.diff.toFixed(2) : '-R$' + Math.abs(sh.diff).toFixed(2))})
+                    Vendas: <strong>${salesCount}</strong> | Gaveta: R$ ${Number(sh.countedCash || 0).toFixed(2).replace('.', ',')} (${diffText})
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #e2e8f0; padding-top: 5px;">
+                    <span class="badge badge-blue" style="font-size: 7.5pt;">🔍 Ver ${salesCount} Vendas & Detalhes</span>
+                    <span style="font-size: 7.5pt; color: #ea580c; font-weight: 700;">🖨️ Reimprimir EVO</span>
                 </div>
             `;
             container.appendChild(item);
         });
     }
 
-    renderEvoPrintSheet() {
+    /* ==================== MODAL DE DETALHES DO TURNO & REIMPRESSÃO ==================== */
+    openShiftDetailsModal(shiftId) {
+        let shift = null;
+        if (shiftId === 'active') {
+            shift = this.state.activeShift;
+        } else {
+            shift = (this.state.shifts || []).find(s => s.id === shiftId);
+            if (!shift && this.state.activeShift && this.state.activeShift.id === shiftId) {
+                shift = this.state.activeShift;
+            }
+        }
+
+        if (!shift) {
+            alert('⚠️ Turno não encontrado.');
+            return;
+        }
+
+        this.currentModalShift = shift;
+        this.shiftModalFilterQuery = '';
+
+        const titleEl = document.getElementById('shift-modal-title');
+        const subtitleEl = document.getElementById('shift-modal-subtitle');
+        const searchInput = document.getElementById('shift-modal-search');
+        if (searchInput) searchInput.value = '';
+
+        const isClosed = shift.status === 'CLOSED';
+        if (titleEl) {
+            titleEl.innerHTML = `📋 Turno <strong>${shift.shiftCode || 'T01'}</strong> — ${shift.operatorName}`;
+        }
+        if (subtitleEl) {
+            const startStr = shift.startTime ? new Date(shift.startTime).toLocaleString('pt-BR') : '-';
+            const endStr = shift.endTime ? new Date(shift.endTime).toLocaleString('pt-BR') : 'Turno em Aberto (Ativo)';
+            subtitleEl.innerHTML = `Início: <strong>${startStr}</strong> | Fechamento: <strong>${endStr}</strong> | Status: <span class="badge ${isClosed ? 'badge-ok' : 'badge-blue'}">${isClosed ? 'Fechado' : 'Aberto'}</span>`;
+        }
+
+        // Totais e KPIs
+        const sales = shift.sales || [];
+        let pixTotal = 0, cardTotal = 0, cashTotal = 0;
+        let cardPixCount = 0;
+
+        sales.forEach(s => {
+            if (s.status !== 'CANCELADA') {
+                const tot = Number(s.total) || 0;
+                if (s.paymentMethod === 'pix') {
+                    pixTotal += tot;
+                    cardPixCount++;
+                } else if (s.paymentMethod === 'dinheiro') {
+                    cashTotal += tot;
+                } else {
+                    cardTotal += tot;
+                    cardPixCount++;
+                }
+            }
+        });
+
+        const grossTotal = pixTotal + cardTotal + cashTotal;
+        const countedCashVal = shift.countedCash !== null && shift.countedCash !== undefined ? Number(shift.countedCash) : cashTotal;
+        const diffVal = Number(shift.diff) || 0;
+
+        const elKpiTotal = document.getElementById('shift-modal-kpi-total');
+        const elKpiCount = document.getElementById('shift-modal-kpi-sales-count');
+        const elKpiCash = document.getElementById('shift-modal-kpi-cash');
+        const elKpiDiff = document.getElementById('shift-modal-kpi-diff');
+        const elKpiCardPix = document.getElementById('shift-modal-kpi-cardpix');
+
+        if (elKpiTotal) elKpiTotal.innerText = `R$ ${grossTotal.toFixed(2).replace('.', ',')}`;
+        if (elKpiCount) elKpiCount.innerText = `${sales.length} vendas`;
+        if (elKpiCash) elKpiCash.innerText = `R$ ${countedCashVal.toFixed(2).replace('.', ',')}`;
+        if (elKpiDiff) {
+            elKpiDiff.innerText = `Registrado: R$ ${cashTotal.toFixed(2).replace('.', ',')} | Dif: ${diffVal === 0 ? 'R$ 0,00' : (diffVal > 0 ? '+R$ ' + diffVal.toFixed(2) : '-R$ ' + Math.abs(diffVal).toFixed(2))}`;
+        }
+        if (elKpiCardPix) elKpiCardPix.innerText = `R$ ${(cardTotal + pixTotal).toFixed(2).replace('.', ',')} (${cardPixCount} vias)`;
+
+        this.renderShiftModalSalesTable();
+        document.getElementById('shift-details-modal').classList.add('active');
+    }
+
+    renderShiftModalSalesTable() {
+        const tbody = document.getElementById('shift-modal-sales-tbody');
+        if (!tbody || !this.currentModalShift) return;
+        tbody.innerHTML = '';
+
+        let sales = this.currentModalShift.sales || [];
+        if (this.shiftModalFilterQuery) {
+            const q = this.shiftModalFilterQuery;
+            sales = sales.filter(s => 
+                s.id.toLowerCase().includes(q) ||
+                (s.paymentMethod && s.paymentMethod.toLowerCase().includes(q)) ||
+                (s.items || []).some(it => it.name.toLowerCase().includes(q))
+            );
+        }
+
+        if (sales.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 16px; color: #94a3b8;">
+                ${this.shiftModalFilterQuery ? 'Nenhuma venda encontrada para esta busca.' : 'Nenhuma venda registrada neste turno.'}
+            </td></tr>`;
+            return;
+        }
+
+        sales.forEach(s => {
+            const tr = document.createElement('tr');
+            const itemsText = (s.items || []).map(it => `<strong>${it.qty}x</strong> ${it.name}`).join('<br>');
+            const isCardOrPix = s.paymentMethod !== 'dinheiro';
+            const payLabel = (s.paymentMethod || '').toUpperCase().replace('_', ' ');
+
+            tr.innerHTML = `
+                <td><span class="slip-code-tag">${s.id}</span></td>
+                <td>${s.dateFormatted || (s.timestamp ? new Date(s.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-')}</td>
+                <td>
+                    <span class="badge ${isCardOrPix ? 'badge-blue' : ''}" style="${!isCardOrPix ? 'background:#e2e8f0; color:#475569;' : ''}">
+                        ${payLabel}
+                    </span>
+                </td>
+                <td><strong>R$ ${Number(s.total).toFixed(2).replace('.', ',')}</strong></td>
+                <td style="font-size: 8.5pt; color: #334155; line-height: 1.3;">${itemsText}</td>
+                <td>
+                    <span class="badge-status ${s.status === 'CANCELADA' ? 'badge-cancel' : 'badge-ok'}">
+                        ${s.status}
+                    </span>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    filterShiftModalSales(query) {
+        this.shiftModalFilterQuery = (query || '').toLowerCase().trim();
+        this.renderShiftModalSalesTable();
+    }
+
+    closeShiftDetailsModal() {
+        const modal = document.getElementById('shift-details-modal');
+        if (modal) modal.classList.remove('active');
+        this.currentModalShift = null;
+    }
+
+    printCurrentModalShift() {
+        if (!this.currentModalShift) return;
+        this.printCashReport(this.currentModalShift);
+    }
+
+    exportCurrentModalShiftCSV() {
+        if (!this.currentModalShift) return;
+        const shift = this.currentModalShift;
+        const sales = shift.sales || [];
+
+        let csv = '\uFEFF'; // UTF-8 BOM
+        csv += 'Turno;Codigo_Venda;Data_Hora;Operador;Forma_Pagamento;Total_Venda;Itens_Vendidos;Status\n';
+
+        sales.forEach(s => {
+            const itemsStr = (s.items || []).map(it => `${it.qty}x ${it.name}`).join(' + ');
+            const dateTime = s.fullDateTime || (s.timestamp ? new Date(s.timestamp).toLocaleString('pt-BR') : '');
+            const line = [
+                shift.shiftCode || 'Turno',
+                s.id,
+                `"${dateTime}"`,
+                `"${s.operatorName || ''}"`,
+                `"${(s.paymentMethod || '').toUpperCase()}"`,
+                `"R$ ${Number(s.total).toFixed(2).replace('.', ',')}"`,
+                `"${itemsStr.replace(/"/g, '""')}"`,
+                s.status
+            ].join(';');
+            csv += line + '\n';
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const safeName = (shift.operatorName || 'Turno').replace(/[^a-zA-Z0-9]/g, '_');
+        link.download = `Vendas_Turno_${shift.shiftCode || 'T01'}_${safeName}.csv`;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+    }
+
+    renderEvoPrintSheet(targetShift = null) {
         const sheet = document.getElementById('evo-print-sheet');
         if (!sheet) return;
 
-        const shift = this.state.activeShift || {};
+        const isPastShift = !!targetShift;
+        const shift = targetShift || this.state.activeShift || {};
         const shiftSales = (shift.sales || []).filter(s => s.status !== 'CANCELADA');
         
         let pixTotal = 0, pixCount = 0;
@@ -1709,8 +1928,13 @@ class PanobiancoApp {
         const grossTotal = pixTotal + debitTotal + creditTotal + cashTotal;
         const totalVendas = shiftSales.length;
 
-        const countedCashVal = parseFloat(document.getElementById('blind-cash-input')?.value) || 0;
-        const diffVal = countedCashVal - cashTotal;
+        const countedCashVal = isPastShift 
+            ? (Number(shift.countedCash) || 0)
+            : (parseFloat(document.getElementById('blind-cash-input')?.value) || 0);
+        const diffVal = isPastShift 
+            ? (Number(shift.diff) || 0)
+            : (countedCashVal - cashTotal);
+
         let diffStatus = 'CONFERIDO / SEM DIVERGÊNCIA';
         if (diffVal > 0.05) diffStatus = `SOBRA DE R$ ${diffVal.toFixed(2).replace('.', ',')}`;
         else if (diffVal < -0.05) diffStatus = `FALTA DE R$ ${Math.abs(diffVal).toFixed(2).replace('.', ',')}`;
@@ -1734,8 +1958,11 @@ class PanobiancoApp {
                 `;
             }).join('');
 
-        const currentOpName = this.currentUser ? `${this.currentUser.name} [${this.currentUser.code.toUpperCase()}]` : (shift.operatorName || 'Operador');
+        const currentOpName = isPastShift 
+            ? (shift.operatorName || 'Operador') 
+            : (this.currentUser ? `${this.currentUser.name} [${this.currentUser.code.toUpperCase()}]` : (shift.operatorName || 'Operador'));
         const startTimeStr = shift.startTime ? new Date(shift.startTime).toLocaleString('pt-BR') : '-';
+        const endTimeStr = shift.endTime ? new Date(shift.endTime).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR');
         const nowStr = new Date().toLocaleString('pt-BR');
 
         sheet.innerHTML = `
@@ -1749,10 +1976,10 @@ class PanobiancoApp {
                 <div class="evo-meta-grid">
                     <div><strong>Unidade:</strong> Panobianco Academias</div>
                     <div><strong>Data/Hora Emissão:</strong> ${nowStr}</div>
-                    <div><strong>Código do Turno:</strong> ${shift.shiftCode || 'T01'}</div>
+                    <div><strong>Código do Turno:</strong> ${shift.shiftCode || 'T01'}${isPastShift ? ' (REIMPRESSÃO)' : ''}</div>
                     <div><strong>Operador do Turno:</strong> ${currentOpName}</div>
                     <div><strong>Abertura do Turno:</strong> ${startTimeStr}</div>
-                    <div><strong>Fechamento / Emissão:</strong> ${nowStr}</div>
+                    <div><strong>Fechamento / Emissão:</strong> ${endTimeStr}</div>
                 </div>
 
                 <div class="divider-line"></div>
@@ -1858,8 +2085,8 @@ class PanobiancoApp {
         `;
     }
 
-    printCashReport() {
-        this.renderEvoPrintSheet();
+    printCashReport(targetShift = null) {
+        this.renderEvoPrintSheet(targetShift);
         window.print();
     }
 
