@@ -1511,22 +1511,50 @@ class PanobiancoApp {
     }
 
     /* ==================== MÓDULO 3: FECHAMENTO & CONFERÊNCIA EVO ==================== */
-    renderShiftModule() {
-        const shift = this.state.activeShift;
-        if (!shift) return;
+    setSlipsViewScope(scope) {
+        this.slipsViewScope = scope;
+        this.renderShiftModule();
+    }
 
-        const currentName = this.currentUser ? `${this.currentUser.name} [${this.currentUser.code.toUpperCase()}]` : 'Luan [F20729]';
-        document.getElementById('shift-operator-name').innerText = currentName;
-        document.getElementById('shift-start-time').innerText = new Date(shift.startTime).toLocaleString('pt-BR');
+    toggleSlipsOrder() {
+        this.slipsSortOrder = (this.slipsSortOrder === 'asc') ? 'desc' : 'asc';
+        this.renderShiftModule();
+    }
+
+    filterShiftSlips(query) {
+        this.slipsFilterQuery = (query || '').toLowerCase().trim();
+        this.renderShiftModule();
+    }
+
+    toggleSlipsExpand() {
+        const wrapper = document.querySelector('.slips-table-wrapper');
+        const btn = document.getElementById('toggle-slips-expand-btn');
+        if (wrapper) {
+            wrapper.classList.toggle('expanded');
+            if (btn) {
+                btn.innerText = wrapper.classList.contains('expanded') ? '🔼 Recolher' : '↕️ Expandir';
+            }
+        }
+    }
+
+    renderShiftModule() {
+        const shift = this.state.activeShift || {};
+        const currentName = this.currentUser ? `${this.currentUser.name} [${this.currentUser.code.toUpperCase()}]` : (shift.operatorName || 'Luan [F20729]');
         
-        let shiftSales = shift.sales || [];
-        const totalShiftSalesCount = shiftSales.length;
-        document.getElementById('shift-sales-count').innerText = `${totalShiftSalesCount} vendas registradas`;
+        const elOpName = document.getElementById('shift-operator-name');
+        if (elOpName) elOpName.innerText = currentName;
+        
+        const elStartTime = document.getElementById('shift-start-time');
+        if (elStartTime) elStartTime.innerText = shift.startTime ? new Date(shift.startTime).toLocaleString('pt-BR') : '-';
+
+        // 1. Resumo Financeiro do Turno Ativo
+        const activeSales = shift.sales || [];
+        document.getElementById('shift-sales-count').innerText = `${activeSales.length} vendas registradas`;
 
         let pix = 0, card = 0, cash = 0;
         let cardPixCount = 0;
 
-        shiftSales.forEach(sale => {
+        activeSales.forEach(sale => {
             if (sale.status !== 'CANCELADA') {
                 if (sale.paymentMethod === 'pix') {
                     pix += sale.total;
@@ -1541,45 +1569,100 @@ class PanobiancoApp {
         });
 
         const total = pix + card + cash;
-
         document.getElementById('shift-val-pix').innerText = `R$ ${pix.toFixed(2).replace('.', ',')}`;
         document.getElementById('shift-val-card').innerText = `R$ ${card.toFixed(2).replace('.', ',')}`;
         document.getElementById('shift-val-cash').innerText = `R$ ${cash.toFixed(2).replace('.', ',')}`;
         document.getElementById('shift-val-total').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
 
-        // Filtro em tempo real das vias da tabela
+        // 2. Mapear Shift ID para Código amigável (T01, T18, T75, T94...)
+        const shiftCodeMap = {};
+        (this.state.shifts || []).forEach(sh => {
+            if (sh.id) shiftCodeMap[sh.id] = sh.shiftCode || 'Turno';
+        });
+        if (this.state.activeShift && this.state.activeShift.id) {
+            shiftCodeMap[this.state.activeShift.id] = this.state.activeShift.shiftCode || 'Turno Atual';
+        }
+
+        // 3. Determinar Escopo de Vendas (Padrão: Todas as Vendas V01 ao mais recente)
+        const scope = this.slipsViewScope || 'all';
+        const allSales = this.state.sales || [];
+        let displayedSales = scope === 'all' ? [...allSales] : [...activeSales];
+
+        // 4. Ordenação (Recente -> V01 ou V01 -> Recente)
+        const sortOrder = this.slipsSortOrder || 'desc';
+        if (sortOrder === 'asc') {
+            displayedSales.sort((a, b) => (a.seq || 0) - (b.seq || 0));
+        } else {
+            displayedSales.sort((a, b) => (b.seq || 0) - (a.seq || 0));
+        }
+
+        // 5. Filtro de Busca
         if (this.slipsFilterQuery) {
             const q = this.slipsFilterQuery;
-            shiftSales = shiftSales.filter(s => 
+            displayedSales = displayedSales.filter(s => 
                 s.id.toLowerCase().includes(q) ||
                 (s.paymentMethod && s.paymentMethod.toLowerCase().includes(q)) ||
                 (s.operatorName && s.operatorName.toLowerCase().includes(q)) ||
+                (shiftCodeMap[s.shiftId] && shiftCodeMap[s.shiftId].toLowerCase().includes(q)) ||
                 (s.items || []).some(it => it.name.toLowerCase().includes(q))
             );
         }
 
-        const slipsBody = document.getElementById('shift-slips-table-body');
-        const slipsCounter = document.getElementById('slips-card-counter');
-        
-        if (slipsCounter) {
-            slipsCounter.innerText = `${cardPixCount} via(s) de Cartão/Pix (${totalShiftSalesCount} vendas totais)`;
+        // Atualizar Botões de Escopo e Ordem
+        const btnAll = document.getElementById('btn-view-all-sales');
+        const btnShift = document.getElementById('btn-view-shift-sales');
+        if (btnAll && btnShift) {
+            if (scope === 'all') {
+                btnAll.className = 'btn btn-sm btn-primary';
+                btnShift.className = 'btn btn-sm btn-secondary';
+            } else {
+                btnAll.className = 'btn btn-sm btn-secondary';
+                btnShift.className = 'btn btn-sm btn-primary';
+            }
         }
 
+        const btnOrder = document.getElementById('btn-slips-order');
+        if (btnOrder) {
+            btnOrder.innerText = sortOrder === 'asc' ? '⬆️ V01 → Recente' : '⬇️ Recente → V01';
+        }
+
+        const slipsCounter = document.getElementById('slips-card-counter');
+        if (slipsCounter) {
+            if (scope === 'all') {
+                const newestId = allSales.length ? allSales[0].id : 'V01';
+                slipsCounter.innerText = `Exibindo ${displayedSales.length} de ${allSales.length} vendas (V01 a ${newestId})`;
+            } else {
+                slipsCounter.innerText = `${displayedSales.length} vendas deste turno (${shift.shiftCode || 'T94'})`;
+            }
+        }
+
+        // 6. Renderizar Linhas da Tabela
+        const slipsBody = document.getElementById('shift-slips-table-body');
         if (slipsBody) {
             slipsBody.innerHTML = '';
-            if (shiftSales.length === 0) {
-                slipsBody.innerHTML = `<tr><td colspan="7" class="text-center" style="color:#94a3b8; padding: 14px;">
-                    ${this.slipsFilterQuery ? 'Nenhuma via encontrada para o filtro buscado.' : 'Nenhuma venda realizada neste turno até o momento.'}
+            if (displayedSales.length === 0) {
+                slipsBody.innerHTML = `<tr><td colspan="8" class="text-center" style="color:#94a3b8; padding: 16px;">
+                    ${this.slipsFilterQuery ? 'Nenhuma venda encontrada para o filtro buscado.' : 'Nenhuma venda registrada no sistema.'}
                 </td></tr>`;
             } else {
-                shiftSales.forEach(s => {
+                displayedSales.forEach(s => {
                     const tr = document.createElement('tr');
                     const itemsText = (s.items || []).map(it => `${it.qty}x ${it.name}`).join(', ');
                     const isCardOrPix = s.paymentMethod !== 'dinheiro';
+                    const sCode = shiftCodeMap[s.shiftId] || 'T??';
+
+                    let dateStr = '--:--';
+                    if (s.timestamp) {
+                        const d = new Date(s.timestamp);
+                        dateStr = `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+                    } else if (s.dateFormatted) {
+                        dateStr = s.dateFormatted;
+                    }
 
                     tr.innerHTML = `
                         <td><span class="slip-code-tag">${s.id}</span></td>
-                        <td>${s.dateFormatted || (s.timestamp ? new Date(s.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--')}</td>
+                        <td><span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700;">${sCode}</span></td>
+                        <td>${dateStr}</td>
                         <td><strong>${(s.paymentMethod || '').toUpperCase().replace('_', ' ')}</strong></td>
                         <td><strong>R$ ${Number(s.total).toFixed(2).replace('.', ',')}</strong></td>
                         <td><small>${itemsText}</small></td>
@@ -1596,22 +1679,6 @@ class PanobiancoApp {
         }
 
         this.renderShiftHistory();
-    }
-
-    filterShiftSlips(query) {
-        this.slipsFilterQuery = (query || '').toLowerCase().trim();
-        this.renderShiftModule();
-    }
-
-    toggleSlipsExpand() {
-        const wrapper = document.querySelector('.slips-table-wrapper');
-        const btn = document.getElementById('toggle-slips-expand-btn');
-        if (wrapper) {
-            wrapper.classList.toggle('expanded');
-            if (btn) {
-                btn.innerText = wrapper.classList.contains('expanded') ? '🔼 Recolher Tabela' : '↕️ Expandir / Ver Todas';
-            }
-        }
     }
 
     async reconcileShift() {

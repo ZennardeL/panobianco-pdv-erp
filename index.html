@@ -297,22 +297,34 @@
                 <div class="evo-slips-card">
                     <div class="evo-slips-header">
                         <div>
-                            <h3>📎 Vias da Maquininha Deste Turno (Conferência de Grampos)</h3>
-                            <p>Verifique se cada filipeta de cartão/Pix grampeada no caixa impresso do EVO bate com o código da lista:</p>
+                            <h3>📎 Conferência de Vias & Histórico Geral de Vendas</h3>
+                            <p>Consulte as filipetas de cartão/Pix para grampear no caixa do EVO ou visualize todas as vendas desde a primeira (V01):</p>
                         </div>
                         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                            <input type="text" id="slips-search-input" placeholder="🔍 Filtrar via (ex: V30, Pix...)" style="padding: 6px 10px; font-size: 8.5pt; border: 1px solid #cbd5e1; border-radius: 6px;" oninput="app.filterShiftSlips(this.value)">
-                            <button class="btn btn-sm btn-secondary" id="toggle-slips-expand-btn" onclick="app.toggleSlipsExpand()" title="Expandir/Recolher tabela de vendas">↕️ Expandir / Ver Todas</button>
-                            <span class="slips-counter-badge" id="slips-card-counter">0 vias de cartão/Pix</span>
+                            <input type="text" id="slips-search-input" placeholder="🔍 Filtrar venda (ex: V01, Pix, Baly...)" style="padding: 6px 10px; font-size: 8.5pt; border: 1px solid #cbd5e1; border-radius: 6px; min-width: 200px;" oninput="app.filterShiftSlips(this.value)">
+                            <button class="btn btn-sm btn-secondary" id="btn-slips-order" onclick="app.toggleSlipsOrder()" title="Alternar ordem de exibição das vendas">⬇️ Recente → V01</button>
+                            <button class="btn btn-sm btn-secondary" id="toggle-slips-expand-btn" onclick="app.toggleSlipsExpand()" title="Expandir/Recolher tabela de vendas">↕️ Expandir</button>
+                            <span class="slips-counter-badge" id="slips-card-counter">0 vendas</span>
                         </div>
                     </div>
 
-                    <div class="slips-table-wrapper">
+                    <!-- Alternância de Escopo: Todas as Vendas vs Turno Atual -->
+                    <div style="display: flex; gap: 8px; margin: 12px 0 8px 0; align-items: center; flex-wrap: wrap;">
+                        <button class="btn btn-sm btn-primary" id="btn-view-all-sales" onclick="app.setSlipsViewScope('all')">
+                            🌐 Todas as Vendas (Desde a V01 até a mais recente)
+                        </button>
+                        <button class="btn btn-sm btn-secondary" id="btn-view-shift-sales" onclick="app.setSlipsViewScope('shift')">
+                            ⏱️ Apenas Turno Atual (Vendas em aberto)
+                        </button>
+                    </div>
+
+                    <div class="slips-table-wrapper expanded">
                         <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>Cód. Venda</th>
-                                    <th>Horário</th>
+                                    <th>Turno</th>
+                                    <th>Data / Horário</th>
                                     <th>Forma Pagto</th>
                                     <th>Valor (R$)</th>
                                     <th>Itens Vendidos</th>
