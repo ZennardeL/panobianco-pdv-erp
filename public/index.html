@@ -222,12 +222,13 @@
 
                             <!-- Vale Funcionário (Pagar Depois) -->
                             <div id="vale-funcionario-container" class="cash-box" style="display: none; background: #fffbeb; border: 1px solid #fde68a; margin-top: 8px; border-radius: 8px; padding: 10px;">
-                                <label style="font-weight: 700; color: #b45309; font-size: 8.5pt; display: block; margin-bottom: 4px;">👤 Selecione o Colaborador (Devedor):</label>
-                                <select id="vale-employee-select" style="width: 100%; padding: 7px 10px; font-size: 8.5pt; border: 1px solid #fcd34d; border-radius: 6px; font-weight: 600; background: white; margin-bottom: 6px;">
-                                    <!-- Preenchido dinamicamente via JS com colaboradores -->
-                                </select>
+                                <label style="font-weight: 700; color: #b45309; font-size: 8.5pt; display: block; margin-bottom: 4px;">👤 Digite o Nome do Funcionário / Colaborador:</label>
+                                <input type="text" id="vale-employee-name" list="vale-employees-datalist" placeholder="Digite o nome do funcionário (ex: Rodrigo Professor, Camila...)" style="width: 100%; padding: 8px 10px; font-size: 9pt; border: 1.5px solid #fcd34d; border-radius: 6px; font-weight: 600; background: white; margin-bottom: 6px; box-sizing: border-box;" autocomplete="off">
+                                <datalist id="vale-employees-datalist">
+                                    <!-- Sugestões dos usuários cadastrados preenchidas dinamicamente -->
+                                </datalist>
                                 <div style="font-size: 7.5pt; color: #92400e; line-height: 1.3;">
-                                    ℹ️ O estoque será baixado e o valor ficará registrado na conta do colaborador para acerto futuro / desconto.
+                                    ℹ️ Digite o nome de qualquer colaborador da academia. O valor ficará registrado em seu nome para acerto futuro.
                                 </div>
                             </div>
                         </div>

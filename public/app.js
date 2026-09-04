@@ -476,6 +476,8 @@ class PanobiancoApp {
     clearCart() {
         this.cart = [];
         this.renderCart();
+        const empInput = document.getElementById('vale-employee-name');
+        if (empInput) empInput.value = '';
     }
 
     renderCart() {
@@ -561,22 +563,21 @@ class PanobiancoApp {
     }
 
     populateValeEmployeesDropdown() {
-        const select = document.getElementById('vale-employee-select');
-        if (!select) return;
-        select.innerHTML = '';
-
-        const users = (this.state.users || []).filter(u => u.active !== false);
-        if (users.length === 0) {
-            select.innerHTML = '<option value="f33488:Nicolas Monção">Nicolas Monção [F33488]</option>';
-            return;
+        const datalist = document.getElementById('vale-employees-datalist');
+        if (datalist) {
+            datalist.innerHTML = '';
+            const users = (this.state.users || []).filter(u => u.active !== false);
+            users.forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = `${u.name} [${u.code.toUpperCase()}]`;
+                datalist.appendChild(opt);
+            });
         }
 
-        users.forEach(u => {
-            const opt = document.createElement('option');
-            opt.value = `${u.code}:${u.name}`;
-            opt.innerText = `👤 ${u.name} [${u.code.toUpperCase()}] — ${u.title || u.role}`;
-            select.appendChild(opt);
-        });
+        const input = document.getElementById('vale-employee-name');
+        if (input) {
+            setTimeout(() => input.focus(), 60);
+        }
     }
 
     calculateChange() {
@@ -611,10 +612,25 @@ class PanobiancoApp {
             fullPaymentMethod = `consumo_interno:${beneficiary}`;
             saleNote = `Consumo Dono: ${beneficiary}`;
         } else if (isVale) {
-            const empVal = document.getElementById('vale-employee-select')?.value || 'f33488:Nicolas Monção';
-            const [empCode, empName] = empVal.split(':');
-            fullPaymentMethod = `vale_funcionario:${empCode || 'func'}:${empName || 'Colaborador'}`;
-            saleNote = `Vale: ${empName || 'Colaborador'} [${(empCode || '').toUpperCase()}]`;
+            const rawEmp = (document.getElementById('vale-employee-name')?.value || '').trim();
+            if (!rawEmp) {
+                alert('⚠️ Por favor, digite o nome do funcionário que está retirando o produto no vale!');
+                document.getElementById('vale-employee-name')?.focus();
+                return;
+            }
+
+            let empName = rawEmp;
+            let empCode = 'func';
+            const codeMatch = rawEmp.match(/\[([A-Za-z0-9]+)\]/);
+            if (codeMatch) {
+                empCode = codeMatch[1].toLowerCase();
+                empName = rawEmp.replace(/\s*\[.*?\]/, '').trim();
+            } else {
+                empCode = empName.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 15) || 'func';
+            }
+
+            fullPaymentMethod = `vale_funcionario:${empCode}:${empName}`;
+            saleNote = `Vale: ${empName} [${empCode.toUpperCase()}]`;
         }
 
         const opCode = this.currentUser ? this.currentUser.code.toUpperCase() : 'F20729';
@@ -656,6 +672,8 @@ class PanobiancoApp {
                     this.showSuccessModal(result.sale);
                     this.cart = [];
                     this.renderCart();
+                    const empInput = document.getElementById('vale-employee-name');
+                    if (empInput) empInput.value = '';
                     await this.syncWithSupabase(false);
                     return;
                 } else {
@@ -714,6 +732,8 @@ class PanobiancoApp {
 
         this.cart = [];
         this.renderCart();
+        const empInput = document.getElementById('vale-employee-name');
+        if (empInput) empInput.value = '';
         this.renderAll();
     }
 
@@ -725,11 +745,21 @@ class PanobiancoApp {
         const preview = document.getElementById('receipt-preview');
         let itemsList = (sale.items || []).map(it => `&bull; ${it.qty}x ${it.name} (R$ ${(it.price * it.qty).toFixed(2).replace('.', ',')})`).join('<br>');
         
+        let payLabel = (sale.paymentMethod || '').toUpperCase();
+        if (payLabel.startsWith('VALE_FUNCIONARIO')) {
+            const parts = (sale.paymentMethod || '').split(':');
+            const who = parts.slice(2).join(':') || parts[1] || 'Colaborador';
+            payLabel = `👤 VALE FUNCIONÁRIO (${who})`;
+        } else if (payLabel.startsWith('CONSUMO_INTERNO')) {
+            const who = (sale.paymentMethod || '').split(':')[1] || 'Dono';
+            payLabel = `👑 CONSUMO INTERNO (${who})`;
+        }
+
         preview.innerHTML = `
             <strong>Comprovante da Lojinha (#${sale.id})</strong><br>
             ⏰ Horário: ${sale.dateFormatted || new Date().toLocaleTimeString('pt-BR')}<br>
             👤 <strong>Operador: ${sale.operatorName}</strong><br>
-            💳 Pagamento: <strong>${(sale.paymentMethod || '').toUpperCase()}</strong><br>
+            💳 Pagamento: <strong>${payLabel}</strong><br>
             <hr style="margin: 6px 0; border: 0; border-top: 1px dashed #cbd5e1;">
             ${itemsList}<br>
             <hr style="margin: 6px 0; border: 0; border-top: 1px dashed #cbd5e1;">
@@ -2924,6 +2954,19 @@ class PanobiancoApp {
     }
 
     /* ==================== MÓDULO 6: GESTÃO DE VALES & CONSUMO INTERNO ==================== */
+    parseValeSale(s) {
+        const m = s.paymentMethod || '';
+        if (!m.startsWith('vale_funcionario')) return null;
+        const parts = m.split(':');
+        const code = (parts[1] || '').trim();
+        const name = (parts.slice(2).join(':') || parts[1] || 'Colaborador').trim();
+        return {
+            code,
+            name,
+            groupKey: name.toLowerCase().trim()
+        };
+    }
+
     renderValesModule() {
         const tbodyDebtors = document.getElementById('vales-debtors-tbody');
         const tbodyOwner = document.getElementById('vales-owner-tbody');
@@ -2942,14 +2985,17 @@ class PanobiancoApp {
         let totalSettledVales = 0;
 
         valeSales.forEach(s => {
-            const m = s.paymentMethod || '';
-            const parts = m.split(':');
-            const empCode = (parts[1] || 'func').toLowerCase();
-            const empName = parts[2] || parts[1] || 'Colaborador';
+            const info = this.parseValeSale(s);
+            if (!info) return;
+
+            const groupKey = info.groupKey;
+            const empCode = info.code || 'VALE';
+            const empName = info.name;
             const isSettled = s.status === 'QUITADO' || (s.cancelReason && s.cancelReason.includes('[QUITADO]'));
 
-            if (!debtorMap[empCode]) {
-                debtorMap[empCode] = {
+            if (!debtorMap[groupKey]) {
+                debtorMap[groupKey] = {
+                    key: groupKey,
                     code: empCode,
                     name: empName,
                     pendingSales: [],
@@ -2963,16 +3009,16 @@ class PanobiancoApp {
             const saleTotal = Number(s.total) || 0;
 
             if (isSettled) {
-                debtorMap[empCode].settledSales.push(s);
-                debtorMap[empCode].totalSettled += saleTotal;
+                debtorMap[groupKey].settledSales.push(s);
+                debtorMap[groupKey].totalSettled += saleTotal;
                 totalSettledVales += saleTotal;
             } else {
-                debtorMap[empCode].pendingSales.push(s);
-                debtorMap[empCode].totalPending += saleTotal;
+                debtorMap[groupKey].pendingSales.push(s);
+                debtorMap[groupKey].totalPending += saleTotal;
                 totalPendingVales += saleTotal;
                 const saleTime = s.timestamp || s.created_at;
-                if (!debtorMap[empCode].lastDate || (saleTime && new Date(saleTime) > new Date(debtorMap[empCode].lastDate))) {
-                    debtorMap[empCode].lastDate = saleTime;
+                if (!debtorMap[groupKey].lastDate || (saleTime && new Date(saleTime) > new Date(debtorMap[groupKey].lastDate))) {
+                    debtorMap[groupKey].lastDate = saleTime;
                 }
             }
         });
@@ -3001,6 +3047,8 @@ class PanobiancoApp {
                 const tr = document.createElement('tr');
                 const lastDateStr = d.lastDate ? new Date(d.lastDate).toLocaleString('pt-BR') : '-';
                 const itemCount = d.pendingSales.reduce((acc, s) => acc + (s.items || []).reduce((sum, it) => sum + (it.qty || 1), 0), 0);
+                const safeKey = encodeURIComponent(d.key);
+                const safeName = d.name.replace(/'/g, "\\'");
 
                 tr.innerHTML = `
                     <td><code><strong>${d.code.toUpperCase()}</strong></code></td>
@@ -3009,8 +3057,8 @@ class PanobiancoApp {
                     <td><strong style="color: #b45309; font-size: 10pt;">R$ ${d.totalPending.toFixed(2).replace('.', ',')}</strong></td>
                     <td><small>${lastDateStr}</small></td>
                     <td class="text-right">
-                        <button class="btn btn-sm btn-secondary" onclick="app.openEmployeeDebtModal('${d.code}')">🔍 Ver Extrato</button>
-                        <button class="btn btn-sm btn-primary" style="background:#16a34a; border-color:#15803d; margin-left: 6px;" onclick="app.settleEmployeeDebtDirect('${d.code}', '${d.name}', ${d.totalPending})">✅ Quitar Débito</button>
+                        <button class="btn btn-sm btn-secondary" onclick="app.openEmployeeDebtModal('${safeKey}')">🔍 Ver Extrato</button>
+                        <button class="btn btn-sm btn-primary" style="background:#16a34a; border-color:#15803d; margin-left: 6px;" onclick="app.settleEmployeeDebtDirect('${safeKey}', '${safeName}', ${d.totalPending})">✅ Quitar Débito</button>
                     </td>
                 `;
                 tbodyDebtors.appendChild(tr);
@@ -3055,16 +3103,36 @@ class PanobiancoApp {
         }
     }
 
-    openEmployeeDebtModal(employeeCode) {
+    openEmployeeDebtModal(encodedKey) {
         const allSales = this.state.sales || [];
-        const normCode = (employeeCode || '').toLowerCase();
+        const targetKey = decodeURIComponent(encodedKey).toLowerCase().trim();
+
         const valeSales = allSales.filter(s => {
-            const m = (s.paymentMethod || '').toLowerCase();
-            return m.startsWith('vale_funcionario') && m.includes(normCode) && s.status !== 'CANCELADA';
+            if (s.status === 'CANCELADA') return false;
+            const info = this.parseValeSale(s);
+            if (!info) return false;
+            return info.groupKey === targetKey || (info.code && info.code.toLowerCase() === targetKey);
         });
 
-        const user = (this.state.users || []).find(u => u.code.toLowerCase() === normCode) || { name: 'Colaborador', code: employeeCode };
-        this.currentDebtModalUser = { code: employeeCode, name: user.name };
+        const matchedUser = (this.state.users || []).find(u => 
+            u.code.toLowerCase() === targetKey || u.name.toLowerCase().trim() === targetKey
+        );
+        
+        let displayName = targetKey;
+        let displayCode = 'VALE';
+
+        if (matchedUser) {
+            displayName = matchedUser.name;
+            displayCode = matchedUser.code.toUpperCase();
+        } else if (valeSales.length > 0) {
+            const firstInfo = this.parseValeSale(valeSales[0]);
+            if (firstInfo) {
+                displayName = firstInfo.name;
+                displayCode = (firstInfo.code || 'VALE').toUpperCase();
+            }
+        }
+
+        this.currentDebtModalUser = { targetKey, code: displayCode, name: displayName };
 
         const pendingSales = valeSales.filter(s => s.status !== 'QUITADO' && (!s.cancelReason || !s.cancelReason.includes('[QUITADO]')));
         const totalPending = pendingSales.reduce((sum, s) => sum + (Number(s.total) || 0), 0);
@@ -3073,7 +3141,7 @@ class PanobiancoApp {
         const summaryEl = document.getElementById('debt-modal-summary');
         const tbody = document.getElementById('debt-modal-tbody');
 
-        if (titleEl) titleEl.innerHTML = `👤 Extrato de Vales — <strong>${user.name} [${user.code.toUpperCase()}]</strong>`;
+        if (titleEl) titleEl.innerHTML = `👤 Extrato de Vales — <strong>${displayName} [${displayCode}]</strong>`;
         if (summaryEl) {
             summaryEl.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -3130,21 +3198,25 @@ class PanobiancoApp {
 
     async settleCurrentEmployeeDebt() {
         if (!this.currentDebtModalUser) return;
-        await this.settleEmployeeDebtDirect(this.currentDebtModalUser.code, this.currentDebtModalUser.name);
+        await this.settleEmployeeDebtDirect(this.currentDebtModalUser.targetKey, this.currentDebtModalUser.name);
         this.closeEmployeeDebtModal();
     }
 
-    async settleEmployeeDebtDirect(employeeCode, employeeName, knownAmount = null) {
+    async settleEmployeeDebtDirect(encodedKey, employeeName, knownAmount = null) {
         if (!this.currentUser || this.currentUser.role !== 'ADMIN') {
             alert('❌ Apenas Administradores podem dar baixa em contas de vales.');
             return;
         }
 
         const allSales = this.state.sales || [];
-        const normCode = (employeeCode || '').toLowerCase();
+        const targetKey = decodeURIComponent(encodedKey).toLowerCase().trim();
+
         const pendingSales = allSales.filter(s => {
-            const m = (s.paymentMethod || '').toLowerCase();
-            return m.startsWith('vale_funcionario') && m.includes(normCode) && s.status !== 'CANCELADA' && s.status !== 'QUITADO' && (!s.cancelReason || !s.cancelReason.includes('[QUITADO]'));
+            if (s.status === 'CANCELADA' || s.status === 'QUITADO') return false;
+            if (s.cancelReason && s.cancelReason.includes('[QUITADO]')) return false;
+            const info = this.parseValeSale(s);
+            if (!info) return false;
+            return info.groupKey === targetKey || (info.code && info.code.toLowerCase() === targetKey);
         });
 
         const totalAmount = knownAmount !== null ? knownAmount : pendingSales.reduce((sum, s) => sum + (Number(s.total) || 0), 0);
@@ -3154,7 +3226,7 @@ class PanobiancoApp {
             return;
         }
 
-        const confirmMsg = `Confirmar quitação do saldo de R$ ${totalAmount.toFixed(2).replace('.', ',')} do colaborador ${employeeName} [${employeeCode.toUpperCase()}]?\n\nIsso marcará todas as compras pendentes como quitadas e registrará na auditoria.`;
+        const confirmMsg = `Confirmar quitação do saldo de R$ ${totalAmount.toFixed(2).replace('.', ',')} do colaborador ${employeeName}?\n\nIsso marcará todas as compras pendentes como quitadas e registrará na auditoria.`;
         if (!confirm(confirmMsg)) return;
 
         const nowStr = new Date().toLocaleString('pt-BR');
@@ -3175,10 +3247,10 @@ class PanobiancoApp {
                     tenant_id: 'default',
                     action: 'QUITACAO_VALE',
                     entity_type: 'USER',
-                    entity_id: employeeCode,
+                    entity_id: targetKey,
                     operator_id: this.currentUser.id,
                     operator_name: adminName,
-                    details: `Quitação total de débitos no valor de R$ ${totalAmount.toFixed(2).replace('.', ',')} para o colaborador ${employeeName} [${employeeCode.toUpperCase()}].`
+                    details: `Quitação total de débitos no valor de R$ ${totalAmount.toFixed(2).replace('.', ',')} para o colaborador ${employeeName}.`
                 });
 
                 alert(`✅ Débito de R$ ${totalAmount.toFixed(2).replace('.', ',')} de ${employeeName} quitado com sucesso!`);
