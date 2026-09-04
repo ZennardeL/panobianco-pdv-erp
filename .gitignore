@@ -22,3 +22,15 @@ backups/
 # OS
 Thumbs.db
 .DS_Store
+
+# Segurança: nunca versionar scripts com chaves sensíveis
+**/reset_test_sales*
+**/migrate_sqlite_to_supabase*
+*.env
+*.env.*
+.env.local
+service_role*
+
+# Scripts de manutenção local (não deployar)
+supabase/reset_*.js
+supabase/migrate_*.js
