@@ -1129,6 +1129,9 @@ body {
 
 .badge-blue { background: #dbeafe; color: #1d4ed8; }
 .badge-red { background: #fee2e2; color: #b91c1c; }
+.badge-yellow { background: #fef3c7; color: #b45309; }
+.badge-purple { background: #f3e8ff; color: #7e22ce; }
+.badge-green { background: #dcfce7; color: #15803d; }
 
 .badge-status {
     padding: 3px 8px;

@@ -74,6 +74,9 @@
                     💵 Fechamento & Vias EVO
                 </button>
                 <!-- Abas Restritas Apenas para Administradores -->
+                <button class="nav-tab admin-only" id="tab-btn-vales" onclick="app.navigate('vales')">
+                    📋 Vales & Consumo
+                </button>
                 <button class="nav-tab admin-only" id="tab-btn-auditoria" onclick="app.navigate('auditoria')">
                     🛡️ Auditoria & Logs
                 </button>
@@ -171,7 +174,7 @@
                         <!-- Formas de Pagamento -->
                         <div class="payment-methods">
                             <label class="pay-title">Forma de Pagamento:</label>
-                            <div class="pay-grid">
+                            <div class="pay-grid" style="grid-template-columns: repeat(3, 1fr); gap: 6px;">
                                 <button class="pay-btn active" data-method="pix" onclick="app.selectPaymentMethod('pix')">
                                     💠 Pix
                                 </button>
@@ -184,6 +187,12 @@
                                 <button class="pay-btn" data-method="dinheiro" onclick="app.selectPaymentMethod('dinheiro')">
                                     💵 Dinheiro
                                 </button>
+                                <button class="pay-btn" data-method="consumo_interno" onclick="app.selectPaymentMethod('consumo_interno')" style="border-color: #8b5cf6;" title="Retirada para o Dono ou cortesia (Valor R$ 0,00)">
+                                    🏢 Consumo Dono
+                                </button>
+                                <button class="pay-btn" data-method="vale_funcionario" onclick="app.selectPaymentMethod('vale_funcionario')" style="border-color: #f59e0b;" title="Colaborador pega produto para pagar depois">
+                                    👤 Vale Funcionário
+                                </button>
                             </div>
 
                             <div id="cash-change-container" class="cash-box" style="display: none;">
@@ -194,6 +203,31 @@
                                 <div class="change-row">
                                     <span>Troco a devolver:</span>
                                     <strong id="change-value">R$ 0,00</strong>
+                                </div>
+                            </div>
+
+                            <!-- Consumo Interno / Dono -->
+                            <div id="consumo-interno-container" class="cash-box" style="display: none; background: #f5f3ff; border: 1px solid #c4b5fd; margin-top: 8px; border-radius: 8px; padding: 10px;">
+                                <label style="font-weight: 700; color: #6d28d9; font-size: 8.5pt; display: block; margin-bottom: 4px;">🏢 Quem está consumindo / autorizou:</label>
+                                <select id="consumo-beneficiary" style="width: 100%; padding: 7px 10px; font-size: 8.5pt; border: 1px solid #ddd6fe; border-radius: 6px; font-weight: 600; background: white; margin-bottom: 6px;">
+                                    <option value="Juliano Amadio [Dono]">👑 Juliano Amadio (Proprietário / Dono)</option>
+                                    <option value="Diretoria / Gerência Geral">👔 Diretoria / Gerência Geral</option>
+                                    <option value="Degustação / Cortesia Aluno">🎁 Degustação / Cortesia Aluno</option>
+                                    <option value="Uso Interno Recepção">🧹 Uso Interno da Recepção</option>
+                                </select>
+                                <div style="font-size: 7.5pt; color: #7c3aed; line-height: 1.3;">
+                                    ℹ️ O estoque será baixado imediatamente. Valor em caixa: <strong>R$ 0,00</strong> (cortesia/despesa interna — não cobra dinheiro na gaveta).
+                                </div>
+                            </div>
+
+                            <!-- Vale Funcionário (Pagar Depois) -->
+                            <div id="vale-funcionario-container" class="cash-box" style="display: none; background: #fffbeb; border: 1px solid #fde68a; margin-top: 8px; border-radius: 8px; padding: 10px;">
+                                <label style="font-weight: 700; color: #b45309; font-size: 8.5pt; display: block; margin-bottom: 4px;">👤 Selecione o Colaborador (Devedor):</label>
+                                <select id="vale-employee-select" style="width: 100%; padding: 7px 10px; font-size: 8.5pt; border: 1px solid #fcd34d; border-radius: 6px; font-weight: 600; background: white; margin-bottom: 6px;">
+                                    <!-- Preenchido dinamicamente via JS com colaboradores -->
+                                </select>
+                                <div style="font-size: 7.5pt; color: #92400e; line-height: 1.3;">
+                                    ℹ️ O estoque será baixado e o valor ficará registrado na conta do colaborador para acerto futuro / desconto.
                                 </div>
                             </div>
                         </div>
@@ -609,6 +643,94 @@
             </div>
         </main>
 
+        <!-- ==================== MÓDULO 7: VALES DE FUNCIONÁRIOS & CONSUMO INTERNO (ADMIN ONLY) ==================== -->
+        <main id="view-vales" class="view-content admin-only">
+            <div class="view-container">
+                <div class="view-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <h2>📋 Gestão de Vales & Consumo Interno</h2>
+                        <p>Controle de débitos a receber de colaboradores e auditoria de retiradas do Dono / Diretoria.</p>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-secondary" onclick="app.exportValesReportCSV()">
+                            📥 Exportar Relatório CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPIs de Vales & Consumo -->
+                <div class="stock-summary-cards" style="margin-bottom: 20px;">
+                    <div class="metric-card warning">
+                        <span class="m-label">Total em Vales Pendentes</span>
+                        <span class="m-val" id="vales-kpi-total-pending">R$ 0,00</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="m-label">Colaboradores com Débito</span>
+                        <span class="m-val" id="vales-kpi-debtors-count">0</span>
+                    </div>
+                    <div class="metric-card" style="border-left: 4px solid #8b5cf6;">
+                        <span class="m-label">Retiradas Dono / Diretoria</span>
+                        <span class="m-val" id="vales-kpi-owner-count">0 retiradas</span>
+                    </div>
+                    <div class="metric-card" style="border-left: 4px solid #10b981;">
+                        <span class="m-label">Vales Quitados no Histórico</span>
+                        <span class="m-val" id="vales-kpi-settled-total">R$ 0,00</span>
+                    </div>
+                </div>
+
+                <!-- Tabela 1: Vales por Colaborador -->
+                <div class="dash-card" style="margin-bottom: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                        <h3 style="margin: 0;">👤 Contas a Receber por Colaborador (Vales em Aberto)</h3>
+                        <span class="badge badge-yellow" id="vales-pending-badge">0 colaboradores</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Matrícula</th>
+                                    <th>Colaborador</th>
+                                    <th>Qtd Vendas / Itens</th>
+                                    <th>Total Pendente</th>
+                                    <th>Última Retirada</th>
+                                    <th class="text-right">Ações de Cobrança</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vales-debtors-tbody">
+                                <!-- Preenchido dinamicamente via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tabela 2: Histórico de Consumo do Dono & Diretoria -->
+                <div class="dash-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                        <h3 style="margin: 0;">🏢 Histórico de Retiradas do Dono & Consumo Interno</h3>
+                        <span class="badge" style="background:#f3e8ff; color:#7e22ce;" id="vales-owner-badge">0 retiradas</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Cód. Venda</th>
+                                    <th>Data / Horário</th>
+                                    <th>Beneficiário</th>
+                                    <th>Itens Retirados</th>
+                                    <th>Custo Operacional</th>
+                                    <th>Operador Recepção</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vales-owner-tbody">
+                                <!-- Preenchido dinamicamente via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+
     </div>
 
     <!-- ==================== MODAIS ==================== -->
@@ -952,6 +1074,44 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="app.closeDuplicatesModal()">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Extrato Detalhado de Vales do Colaborador -->
+    <div id="employee-debt-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 id="debt-modal-title">👤 Extrato de Vales — Colaborador</h3>
+                <button class="close-btn" onclick="app.closeEmployeeDebtModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="debt-modal-summary" style="margin-bottom: 14px; padding: 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; font-size: 9pt;">
+                    <!-- Preenchido via JS -->
+                </div>
+                <div class="table-responsive" style="max-height: 360px; overflow-y: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Cód. Venda</th>
+                                <th>Data / Horário</th>
+                                <th>Itens Retirados</th>
+                                <th>Valor Total</th>
+                                <th>Operador Balcão</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="debt-modal-tbody">
+                            <!-- Preenchido via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                <button class="btn btn-secondary" onclick="app.closeEmployeeDebtModal()">Fechar</button>
+                <button class="btn btn-primary" style="background: #16a34a; border-color: #15803d;" id="btn-settle-employee-debt" onclick="app.settleCurrentEmployeeDebt()">
+                    ✅ Dar Baixa Total / Marcar como Quitado
+                </button>
             </div>
         </div>
     </div>
