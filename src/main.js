@@ -1,0 +1,69 @@
+/**
+ * Panobianco PDV & ERP — Entry Point (Modular)
+ * 
+ * IMPORTANTE: Este arquivo é o ponto de entrada da arquitetura modular.
+ * Neste momento (Fase 1), ele apenas exporta os utilitários base.
+ * O app.js monolítico original continua sendo o arquivo ativo em produção.
+ * 
+ * A migração ocorrerá de forma incremental nas Fases 3-8:
+ * - Fase 3: modules/auth.js
+ * - Fase 4: modules/cart.js + modules/sales.js
+ * - Fase 5: modules/shifts.js + modules/reports.js
+ * - Fase 6: modules/products.js + modules/inventory.js + modules/users.js
+ * - Fase 7: modules/audit.js + modules/dashboard.js
+ * - Fase 8: Eliminação do app.js monolítico
+ * 
+ * @module main
+ */
+
+// ── Core: utilitários e constantes ──────────
+export {
+    escapeHtml,
+    sanitizeCsvField,
+    formatCurrency,
+    formatDateTime,
+    formatTime,
+    formatShortDateTime,
+    debounce,
+    generateLocalId,
+    normalizeString,
+    truncate
+} from './core/helpers.js';
+
+export {
+    ROLES,
+    ROLE_LABELS,
+    ROLE_AVATARS,
+    SALE_STATUS,
+    SHIFT_STATUS,
+    PAYMENT_METHODS,
+    PAYMENT_LABELS,
+    CATEGORIES,
+    CATEGORY_LABELS,
+    CATEGORY_GROUPS,
+    getCategoryLabel,
+    DEFAULT_TENANT_ID,
+    POLLING_INTERVAL_MS,
+    CASH_DIFF_TOLERANCE,
+    PHOTO_MAX_SIZE,
+    APP_VERSION
+} from './core/constants.js';
+
+// ── Módulos futuros (Fases 3-8) ─────────────
+// export * from './modules/auth.js';
+// export * from './modules/cart.js';
+// export * from './modules/sales.js';
+// export * from './modules/shifts.js';
+// export * from './modules/products.js';
+// export * from './modules/inventory.js';
+// export * from './modules/users.js';
+// export * from './modules/audit.js';
+// export * from './modules/dashboard.js';
+// export * from './modules/reports.js';
+
+// ── Serviços futuros (Fase 2) ───────────────
+// export * from './services/data-service.js';
+// export * from './services/supabase-client.js';
+// export * from './services/sync.js';
+// export * from './services/realtime.js';
+// export * from './services/storage.js';
