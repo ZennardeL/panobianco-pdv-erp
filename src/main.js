@@ -61,9 +61,48 @@ export {
 // export * from './modules/dashboard.js';
 // export * from './modules/reports.js';
 
-// ── Serviços futuros (Fase 2) ───────────────
-// export * from './services/data-service.js';
-// export * from './services/supabase-client.js';
-// export * from './services/sync.js';
-// export * from './services/realtime.js';
-// export * from './services/storage.js';
+// ── Serviços (Fase 2) ───────────────────────
+export {
+    initSupabase,
+    getClient,
+    getClientOrNull,
+    isConnected,
+    getConfig,
+    getTenantId,
+    testConnection,
+    destroyClient
+} from './services/supabase-client.js';
+
+export {
+    getFullState,
+    processSale,
+    cancelSale,
+    upsertProduct,
+    deleteProduct,
+    restockProduct,
+    closeShift,
+    upsertUser,
+    deleteUser,
+    insertAuditLog,
+    getAuditLogs
+} from './services/data-service.js';
+
+export {
+    subscribe as subscribeRealtime,
+    unsubscribe as unsubscribeRealtime,
+    isSubscribed
+} from './services/realtime.js';
+
+export {
+    uploadProductPhoto,
+    removeProductPhoto
+} from './services/storage.js';
+
+export {
+    loadLocalState,
+    saveLocalState,
+    getApiBase,
+    authFetch,
+    executeWithFallback,
+    syncState
+} from './services/sync.js';
