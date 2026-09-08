@@ -49,8 +49,25 @@ export {
     APP_VERSION
 } from './core/constants.js';
 
-// ── Módulos futuros (Fases 3-8) ─────────────
-// export * from './modules/auth.js';
+// ── Módulos de Domínio (Fase 3+) ────────────
+export {
+    configureAuth,
+    getCurrentUser,
+    getAuthToken,
+    isAdmin,
+    isAuthenticated,
+    showLoginModal,
+    handleEmployeeLogin,
+    logout,
+    clearSession,
+    restoreSession,
+    applyLoginUI
+} from './modules/auth.js';
+
+export {
+    navigate
+} from './modules/navigation.js';
+
 // export * from './modules/cart.js';
 // export * from './modules/sales.js';
 // export * from './modules/shifts.js';
