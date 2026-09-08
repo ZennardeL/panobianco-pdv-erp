@@ -68,8 +68,34 @@ export {
     navigate
 } from './modules/navigation.js';
 
-// export * from './modules/cart.js';
-// export * from './modules/sales.js';
+export {
+    getCart,
+    getSelectedPaymentMethod,
+    getCartTotal,
+    getCartCost,
+    getCartQty,
+    filterCategory,
+    searchProducts,
+    getFilteredProducts,
+    renderProductsGrid,
+    addToCart,
+    updateCartQty,
+    clearCart,
+    resetCart,
+    renderCart,
+    selectPaymentMethod,
+    calculateChange
+} from './modules/cart.js';
+
+export {
+    getLastSaleId,
+    setLastSaleId,
+    finalizeSale,
+    showSuccessModal,
+    closeSuccessModal,
+    cancelLastSale
+} from './modules/sales.js';
+
 // export * from './modules/shifts.js';
 // export * from './modules/products.js';
 // export * from './modules/inventory.js';
