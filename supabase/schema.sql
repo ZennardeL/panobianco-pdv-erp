@@ -181,8 +181,8 @@ BEGIN
         UPDATE counters SET value = v_seq WHERE tenant_id = p_tenant_id AND key = 'sale_counter';
     END IF;
 
-    -- Formatar código de venda (ex: V01, V02, V10, V100...)
-    v_sale_id := 'V' || LPAD(v_seq::TEXT, 2, '0');
+    -- Formatar código de venda (ex: V01, V02, V10, V100... sem truncamento do LPAD no Postgres)
+    v_sale_id := 'V' || (CASE WHEN v_seq < 10 THEN '0' || v_seq::TEXT ELSE v_seq::TEXT END);
 
     -- 2. Buscar turno aberto atual
     SELECT id INTO v_active_shift_id
