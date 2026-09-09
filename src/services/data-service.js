@@ -156,16 +156,154 @@ export async function getFullState(tenantId) {
  */
 export async function processSale(salePayload, tenantId) {
     const client = getClient();
-    const { data, error } = await client.rpc('process_sale', {
-        p_tenant_id: tenantId || getTenantId(),
-        p_operator_id: salePayload.operatorId,
-        p_operator_name: salePayload.operatorName,
-        p_operator_code: salePayload.operatorCode,
-        p_payment_method: salePayload.paymentMethod,
-        p_items: salePayload.items
+    const tid = tenantId || getTenantId();
+
+    try {
+        const { data, error } = await client.rpc('process_sale', {
+            p_tenant_id: tid,
+            p_operator_id: salePayload.operatorId,
+            p_operator_name: salePayload.operatorName,
+            p_operator_code: salePayload.operatorCode,
+            p_payment_method: salePayload.paymentMethod,
+            p_items: salePayload.items
+        });
+
+        if (error) throw error;
+        return data;
+    } catch (rpcErr) {
+        const errMsg = (rpcErr && (rpcErr.message || rpcErr.details || String(rpcErr))) || '';
+        if (errMsg.includes('sales_pkey') || errMsg.includes('duplicate key')) {
+            console.warn('⚠️ Erro de chave duplicada na RPC (bug LPAD quando seq >= 100). Acionando fallback resiliente...', rpcErr);
+            return await _processSaleFallback(salePayload, tid);
+        }
+        throw rpcErr;
+    }
+}
+
+async function _processSaleFallback(salePayload, tenantId) {
+    const client = getClient();
+    const { data: counterData } = await client
+        .from('counters')
+        .select('value')
+        .eq('tenant_id', tenantId)
+        .eq('key', 'sale_counter')
+        .single();
+
+    let nextSeq = (counterData?.value || 0) + 1;
+
+    const { data: latestSale } = await client
+        .from('sales')
+        .select('seq')
+        .eq('tenant_id', tenantId)
+        .order('seq', { ascending: false })
+        .limit(1);
+
+    if (latestSale && latestSale.length > 0 && latestSale[0].seq >= nextSeq) {
+        nextSeq = latestSale[0].seq + 1;
+    }
+
+    const saleId = 'V' + (nextSeq < 10 ? '0' + nextSeq : nextSeq);
+
+    const { data: openShift } = await client
+        .from('shifts')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('status', 'OPEN')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+    const shiftId = openShift && openShift.length > 0 ? openShift[0].id : null;
+
+    let totalVal = 0;
+    let totalCost = 0;
+    let itemCount = 0;
+
+    for (const item of salePayload.items) {
+        const { data: prod } = await client
+            .from('products')
+            .select('stock, price, cost, name')
+            .eq('id', item.productId)
+            .eq('tenant_id', tenantId)
+            .single();
+
+        if (prod) {
+            const newStock = Math.max(0, (prod.stock || 0) - item.qty);
+            await client
+                .from('products')
+                .update({ stock: newStock, updated_at: new Date().toISOString() })
+                .eq('id', item.productId)
+                .eq('tenant_id', tenantId);
+
+            totalVal += (item.price || prod.price) * item.qty;
+            totalCost += (item.cost || prod.cost || 0) * item.qty;
+            itemCount += item.qty;
+        }
+    }
+
+    const profit = totalVal - totalCost;
+
+    const { error: insertSaleErr } = await client
+        .from('sales')
+        .insert({
+            id: saleId,
+            tenant_id: tenantId,
+            seq: nextSeq,
+            operator_id: salePayload.operatorId,
+            operator_name: salePayload.operatorName,
+            operator_code: salePayload.operatorCode,
+            payment_method: salePayload.paymentMethod,
+            total: totalVal,
+            cost: totalCost,
+            profit: profit,
+            status: 'CONCLUIDA',
+            shift_id: shiftId,
+            created_at: new Date().toISOString()
+        });
+
+    if (insertSaleErr) throw insertSaleErr;
+
+    const itemsToInsert = salePayload.items.map(it => ({
+        sale_id: saleId,
+        tenant_id: tenantId,
+        product_id: it.productId,
+        product_name: it.name,
+        qty: it.qty,
+        unit_price: it.price,
+        unit_cost: it.cost || 0
+    }));
+
+    if (itemsToInsert.length > 0) {
+        await client.from('sale_items').insert(itemsToInsert);
+    }
+
+    await client
+        .from('counters')
+        .upsert({ tenant_id: tenantId, key: 'sale_counter', value: nextSeq });
+
+    await insertAuditLog(tenantId, {
+        action: 'VENDA',
+        entityType: 'sale',
+        entityId: saleId,
+        operatorId: salePayload.operatorId,
+        operatorName: salePayload.operatorName,
+        details: `Total: R$ ${totalVal.toFixed(2).replace('.', ',')} | Pagto: ${(salePayload.paymentMethod || '').toUpperCase()} | Itens: ${itemCount}`
     });
-    if (error) throw error;
-    return data;
+
+    return {
+        success: true,
+        sale: {
+            id: saleId,
+            seq: nextSeq,
+            total: totalVal,
+            cost: totalCost,
+            profit: profit,
+            paymentMethod: salePayload.paymentMethod,
+            operatorName: salePayload.operatorName,
+            operatorCode: salePayload.operatorCode,
+            status: 'CONCLUIDA',
+            createdAt: new Date().toISOString()
+        }
+    };
 }
 
 /**
