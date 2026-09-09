@@ -10,7 +10,23 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=3.2.1">
+    <link rel="stylesheet" href="style.css?v=3.2.2">
+    <!-- Sentry Error Monitoring & Performance Tracking -->
+    <script src="https://browser.sentry-cdn.com/8.54.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
+    <script>
+        if (typeof Sentry !== 'undefined') {
+            Sentry.init({
+                dsn: "https://d71c83f9b055d6ce4c46e2b0389e9eb0@o4512058173423616.ingest.us.sentry.io/4512058182664193",
+                integrations: [
+                    Sentry.browserTracingIntegration()
+                ],
+                tracesSampleRate: 1.0,
+                tracePropagationTargets: ["localhost", "panobianco-pdv-erp.vercel.app", /^https:\/\/.*\.supabase\.co/],
+                environment: window.location.hostname.includes('vercel.app') ? 'production' : 'development',
+                release: 'panobianco-pdv@3.2.2'
+            });
+        }
+    </script>
 </head>
 <body>
 

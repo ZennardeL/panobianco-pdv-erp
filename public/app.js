@@ -325,9 +325,20 @@ class PanobiancoApp {
         }
 
         this.navigate('pdv');
+
+        if (typeof Sentry !== 'undefined') {
+            Sentry.setUser({
+                id: user.id || user.code,
+                username: `${user.name} [${(user.code || '').toUpperCase()}]`,
+                role: user.role
+            });
+        }
     }
 
     async logout() {
+        if (typeof Sentry !== 'undefined') {
+            Sentry.setUser(null);
+        }
         // Notificar servidor para invalidar token
         if (this.authToken) {
             try {
