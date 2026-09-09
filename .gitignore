@@ -34,3 +34,8 @@ service_role*
 # Scripts de manutenção local (não deployar)
 supabase/reset_*.js
 supabase/migrate_*.js
+
+# Skills CLI artifacts
+.claude/
+agent/
+skills-lock.json
