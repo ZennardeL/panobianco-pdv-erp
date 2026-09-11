@@ -2,16 +2,18 @@
  * Panobianco PDV & ERP — Entry Point (Modular)
  * 
  * IMPORTANTE: Este arquivo é o ponto de entrada da arquitetura modular.
- * Neste momento (Fase 1), ele apenas exporta os utilitários base.
- * O app.js monolítico original continua sendo o arquivo ativo em produção.
+ * Exporta todos os módulos extraídos das Fases 1-7.
+ * O app.js monolítico original continua ativo em produção.
  * 
- * A migração ocorrerá de forma incremental nas Fases 3-8:
- * - Fase 3: modules/auth.js
+ * Fases concluídas:
+ * - Fase 1: core/helpers.js + core/constants.js
+ * - Fase 2: services/ (supabase-client, data-service, sync, realtime, storage)
+ * - Fase 3: modules/auth.js + modules/navigation.js
  * - Fase 4: modules/cart.js + modules/sales.js
  * - Fase 5: modules/shifts.js + modules/reports.js
  * - Fase 6: modules/products.js + modules/inventory.js + modules/users.js
  * - Fase 7: modules/audit.js + modules/dashboard.js
- * - Fase 8: Eliminação do app.js monolítico
+ * - Fase 8: Eliminação do app.js monolítico (pendente)
  * 
  * @module main
  */
@@ -96,13 +98,97 @@ export {
     cancelLastSale
 } from './modules/sales.js';
 
-// export * from './modules/shifts.js';
-// export * from './modules/products.js';
-// export * from './modules/inventory.js';
-// export * from './modules/users.js';
-// export * from './modules/audit.js';
-// export * from './modules/dashboard.js';
-// export * from './modules/reports.js';
+// ── Módulos de Domínio (Fase 5) ────────────
+export {
+    configureShifts,
+    setSlipsViewScope,
+    toggleSlipsOrder,
+    filterShiftSlips,
+    toggleSlipsExpand,
+    renderShiftModule,
+    reconcileShift,
+    renderShiftHistory,
+    openShiftDetailsModal,
+    renderShiftModalSalesTable,
+    filterShiftModalSales,
+    closeShiftDetailsModal,
+    printCurrentModalShift,
+    exportCurrentModalShiftCSV
+} from './modules/shifts.js';
+
+export {
+    configureReports,
+    renderEvoPrintSheet,
+    printCashReport
+} from './modules/reports.js';
+
+// ── Módulos de Domínio (Fase 6) ────────────
+export {
+    configureProducts,
+    openQuickPhotoModal,
+    closeQuickPhotoModal,
+    previewQuickPhoto,
+    saveQuickPhoto,
+    removeQuickPhoto,
+    compressImage,
+    openNewProductModal,
+    editProduct,
+    previewProductPhoto,
+    removeProductPhotoFromModal,
+    saveProduct,
+    confirmDeleteProduct,
+    deleteCurrentEditingProduct,
+    deleteProductById,
+    openDuplicatesModal,
+    closeDuplicatesModal,
+    renderDuplicatesList,
+    deleteDuplicateItem,
+    mergeDuplicateItem,
+    closeProductModal
+} from './modules/products.js';
+
+export {
+    configureInventory,
+    filterStockTable,
+    detectDuplicateProducts,
+    renderStockTable,
+    openRestockModal,
+    confirmRestock,
+    closeRestockModal
+} from './modules/inventory.js';
+
+export {
+    configureUsers,
+    renderUsersTable,
+    openNewUserModal,
+    editUser,
+    saveUser,
+    deleteUser,
+    closeUserModal
+} from './modules/users.js';
+
+// ── Módulos de Domínio (Fase 7) ────────────
+export {
+    configureAudit,
+    renderAuditLogs,
+    filterAudit,
+    openCancelModal,
+    closeCancelModal,
+    confirmCancelSale,
+    exportAuditLogs,
+    switchAuditTab,
+    loadAuditEvents,
+    filterAuditEvents,
+    renderAuditEvents,
+    formatActionLabel,
+    getActionBadge
+} from './modules/audit.js';
+
+export {
+    configureDashboard,
+    renderDashboard,
+    setDashEl
+} from './modules/dashboard.js';
 
 // ── Serviços (Fase 2) ───────────────────────
 export {
