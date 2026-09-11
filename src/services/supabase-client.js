@@ -33,7 +33,7 @@ export function initSupabase(config) {
     if (_client && _connected) return true;
 
     // Resolver config: parâmetro > global > localStorage
-    _config = config || (typeof SUPABASE_CONFIG !== 'undefined' ? SUPABASE_CONFIG : null);
+    _config = config || (typeof window.SUPABASE_CONFIG !== 'undefined' ? window.SUPABASE_CONFIG : null);
 
     if (!_config || !_config.url || !_config.anonKey) {
         console.warn('⚠️ Supabase: configuração não encontrada.');
@@ -48,8 +48,8 @@ export function initSupabase(config) {
 
     try {
         // supabase é carregado via CDN (<script> no index.html)
-        if (typeof supabase !== 'undefined' && supabase.createClient) {
-            _client = supabase.createClient(_config.url, _config.anonKey);
+        if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+            _client = window.supabase.createClient(_config.url, _config.anonKey);
             _connected = true;
             console.log('⚡ Supabase Client inicializado com sucesso.');
         } else {
