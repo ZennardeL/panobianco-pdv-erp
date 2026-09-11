@@ -1,0 +1,9 @@
+﻿<!DOCTYPE html><html><head></head><body>
+<script type="module">
+// Inline test of helpers content
+export function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+document.title = 'OK';
+</script></body></html>
