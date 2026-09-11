@@ -30,7 +30,7 @@
 </head>
 <body>
 
-    <!-- ==================== TELA DE LOGIN PRIVADA (APENAS CÃ“DIGO) ==================== -->
+    <!-- ==================== TELA DE LOGIN PRIVADA (APENAS CÓDIGO) ==================== -->
     <div id="login-modal" class="modal-overlay active">
         <div class="login-card">
             <div class="brand-header">
@@ -43,28 +43,28 @@
 
             <form id="login-form" onsubmit="event.preventDefault(); app.handleEmployeeLogin();">
                 <div class="login-input-group">
-                    <label>Digite seu CÃ³digo de FuncionÃ¡rio:</label>
+                    <label>Digite seu Código de Funcionário:</label>
                     <div class="input-with-icon">
-                        <span class="icon">ðŸ†”</span>
-                        <input type="text" id="login-employee-code" placeholder="Digite seu cÃ³digo ou matrÃ­cula..." autocomplete="off" autofocus required>
+                        <span class="icon">🆔</span>
+                        <input type="text" id="login-employee-code" placeholder="Digite seu código ou matrícula..." autocomplete="off" autofocus required>
                     </div>
                 </div>
 
                 <p class="login-error-msg" id="login-error" style="display: none;"></p>
 
                 <button type="submit" class="btn-login-submit" id="btn-login">
-                    ðŸš€ Acessar Caixa / Sistema
+                    🚀 Acessar Caixa / Sistema
                 </button>
             </form>
 
             <div class="security-privacy-hint">
-                ðŸ”’ <strong>Acesso Individual & Auditado</strong><br>
-                Cada colaborador deve usar seu prÃ³prio cÃ³digo. Todas as vendas ficam vinculadas Ã  sua matrÃ­cula.
+                🔒 <strong>Acesso Individual & Auditado</strong><br>
+                Cada colaborador deve usar seu próprio código. Todas as vendas ficam vinculadas à sua matrícula.
             </div>
         </div>
     </div>
 
-    <!-- ==================== APLICAÃ‡ÃƒO PRINCIPAL ==================== -->
+    <!-- ==================== APLICAÇÃO PRINCIPAL ==================== -->
     <div id="app-container" class="app-layout">
 
         <!-- Topbar -->
@@ -75,75 +75,75 @@
                     <h1>PANOBIANCO <span>PDV & ERP</span></h1>
                     <span class="unit-tag">Unidade Franquia</span>
                 </div>
-                <span id="sync-status-badge" class="sync-badge online" style="cursor: default;" title="ConexÃ£o Segura em Nuvem Ativa (Realtime)">ðŸŸ¢ Nuvem Conectada (Realtime)</span>
+                <span id="sync-status-badge" class="sync-badge online" style="cursor: default;" title="Conexão Segura em Nuvem Ativa (Realtime)">🟢 Nuvem Conectada (Realtime)</span>
             </div>
 
-            <!-- NavegaÃ§Ã£o entre Telas -->
+            <!-- Navegação entre Telas -->
             <nav class="nav-tabs">
                 <button class="nav-tab active" id="tab-btn-pdv" onclick="app.navigate('pdv')">
-                    ðŸ›’ Frente de Caixa
+                    🛒 Frente de Caixa
                 </button>
                 <button class="nav-tab" id="tab-btn-estoque" onclick="app.navigate('estoque')">
-                    ðŸ“¦ Estoque & Fotos
+                    📦 Estoque & Fotos
                 </button>
                 <button class="nav-tab" id="tab-btn-caixa" onclick="app.navigate('caixa')">
-                    ðŸ’µ Fechamento & Vias EVO
+                    💵 Fechamento & Vias EVO
                 </button>
                 <!-- Abas Restritas Apenas para Administradores -->
                 <button class="nav-tab admin-only" id="tab-btn-auditoria" onclick="app.navigate('auditoria')">
-                    ðŸ›¡ï¸ Auditoria & Logs
+                    🛡️ Auditoria & Logs
                 </button>
                 <button class="nav-tab admin-only" id="tab-btn-equipe" onclick="app.navigate('equipe')">
-                    ðŸ‘¥ Equipe & CÃ³digos
+                    👥 Equipe & Códigos
                 </button>
                 <button class="nav-tab admin-only" id="tab-btn-dashboard" onclick="app.navigate('dashboard')">
-                    ðŸ“Š Dashboard ERP
+                    📊 Dashboard ERP
                 </button>
             </nav>
 
-            <!-- Status do UsuÃ¡rio Logado -->
+            <!-- Status do Usuário Logado -->
             <div class="topbar-right">
                 <div class="user-pill">
-                    <span class="user-avatar" id="current-user-avatar">ðŸ‘¤</span>
+                    <span class="user-avatar" id="current-user-avatar">👤</span>
                     <div class="user-details">
                         <span class="user-name" id="current-user-name">Operador</span>
-                        <span class="user-role" id="current-user-role">RecepÃ§Ã£o / Caixa</span>
+                        <span class="user-role" id="current-user-role">Recepção / Caixa</span>
                     </div>
                 </div>
                 <button class="logout-btn" onclick="app.logout()" title="Trocar de Operador">
-                    ðŸšª Trocar UsuÃ¡rio
+                    🚪 Trocar Usuário
                 </button>
             </div>
         </header>
 
         <!-- Banner de Alerta de Estoque -->
         <div id="stock-alert-banner" style="display:none; background:linear-gradient(135deg,#fef2f2,#fff7ed); border:1px solid #fca5a5; border-radius:12px; padding:12px 20px; margin:0 16px 12px; display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="app.navigate('estoque')">
-            <span style="font-size:1.5em;">âš ï¸</span>
+            <span style="font-size:1.5em;">⚠️</span>
             <div style="flex:1;">
-                <strong id="stock-alert-title" style="color:#dc2626;">AtenÃ§Ã£o: Estoque CrÃ­tico</strong>
+                <strong id="stock-alert-title" style="color:#dc2626;">Atenção: Estoque Crítico</strong>
                 <p id="stock-alert-detail" style="margin:2px 0 0; font-size:0.85em; color:#92400e;"></p>
             </div>
-            <button onclick="event.stopPropagation(); document.getElementById('stock-alert-banner').style.display='none';" style="background:none;border:none;font-size:1.2em;cursor:pointer;color:#9ca3af;" title="Fechar">âœ•</button>
+            <button onclick="event.stopPropagation(); document.getElementById('stock-alert-banner').style.display='none';" style="background:none;border:none;font-size:1.2em;cursor:pointer;color:#9ca3af;" title="Fechar">✕</button>
         </div>
 
         <!-- ==================== VIEW 1: PDV FRENTE DE CAIXA ==================== -->
         <main id="view-pdv" class="view-content active">
             <div class="pdv-grid">
                 
-                <!-- Ãrea do CatÃ¡logo de Produtos -->
+                <!-- Área do Catálogo de Produtos -->
                 <div class="catalog-section">
                     <div class="catalog-header">
                         <div class="category-filters">
                             <button class="cat-pill active" onclick="app.filterCategory('todas')">Todos os Itens</button>
-                            <button class="cat-pill" onclick="app.filterCategory('bebidas')">ðŸ¥¤ Bebidas & EnergÃ©ticos</button>
-                            <button class="cat-pill" onclick="app.filterCategory('proteicos')">ðŸ« Barrinhas & Whey</button>
-                            <button class="cat-pill" onclick="app.filterCategory('suplementos')">ðŸ‹ï¸ Suplementos & Doses</button>
-                            <button class="cat-pill" onclick="app.filterCategory('roupas')">ðŸ‘• Roupas & VestuÃ¡rio</button>
-                            <button class="cat-pill" onclick="app.filterCategory('acessorios')">ðŸŽ’ AcessÃ³rios & Brindes</button>
+                            <button class="cat-pill" onclick="app.filterCategory('bebidas')">🥤 Bebidas & Energéticos</button>
+                            <button class="cat-pill" onclick="app.filterCategory('proteicos')">🍫 Barrinhas & Whey</button>
+                            <button class="cat-pill" onclick="app.filterCategory('suplementos')">🏋️ Suplementos & Doses</button>
+                            <button class="cat-pill" onclick="app.filterCategory('roupas')">👕 Roupas & Vestuário</button>
+                            <button class="cat-pill" onclick="app.filterCategory('acessorios')">🎒 Acessórios & Brindes</button>
                         </div>
                         
                         <div class="search-box">
-                            <input type="text" id="pdv-search" placeholder="ðŸ” Digite o nome do produto (ex: Baly, Ãgua, Bold, Whey)..." oninput="app.searchProducts(this.value)">
+                            <input type="text" id="pdv-search" placeholder="🔍 Digite o nome do produto (ex: Baly, Água, Bold, Whey)..." oninput="app.searchProducts(this.value)">
                         </div>
                     </div>
 
@@ -157,9 +157,9 @@
                 <div class="cart-section">
                     <div class="cart-header">
                         <div>
-                            <h3>ðŸ“‹ Cupom de Venda</h3>
+                            <h3>📋 Cupom de Venda</h3>
                             <div style="display: flex; gap: 8px; align-items: center; margin-top: 2px;">
-                                <span id="next-sale-code-tag" class="sale-code-pill">PrÃ³xima: V01</span>
+                                <span id="next-sale-code-tag" class="sale-code-pill">Próxima: V01</span>
                                 <small id="cart-operator-tag" style="color: #64748b; font-weight: 700;">Operador: --</small>
                             </div>
                         </div>
@@ -168,7 +168,7 @@
 
                     <div class="cart-items" id="cart-items">
                         <div class="empty-cart">
-                            <div class="empty-cart-icon">ðŸ›’</div>
+                            <div class="empty-cart-icon">🛒</div>
                             <p>Nenhum item selecionado</p>
                             <small>Clique nos produtos ao lado para adicionar ao cupom</small>
                         </div>
@@ -189,16 +189,16 @@
                             <label class="pay-title">Forma de Pagamento:</label>
                             <div class="pay-grid">
                                 <button class="pay-btn active" data-method="pix" onclick="app.selectPaymentMethod('pix')">
-                                    ðŸ’  Pix
+                                    💠 Pix
                                 </button>
                                 <button class="pay-btn" data-method="cartao_debito" onclick="app.selectPaymentMethod('cartao_debito')">
-                                    ðŸ’³ DÃ©bito
+                                    💳 Débito
                                 </button>
                                 <button class="pay-btn" data-method="cartao_credito" onclick="app.selectPaymentMethod('cartao_credito')">
-                                    ðŸ’³ CrÃ©dito
+                                    💳 Crédito
                                 </button>
                                 <button class="pay-btn" data-method="dinheiro" onclick="app.selectPaymentMethod('dinheiro')">
-                                    ðŸ’µ Dinheiro
+                                    💵 Dinheiro
                                 </button>
                             </div>
 
@@ -215,7 +215,7 @@
                         </div>
 
                         <button class="btn-finalize-sale" id="btn-finalize" onclick="app.finalizeSale()">
-                            âœ… Finalizar Venda & Gerar CÃ³digo
+                            ✅ Finalizar Venda & Gerar Código
                         </button>
                     </div>
                 </div>
@@ -228,15 +228,15 @@
             <div class="view-inner">
                 <div class="module-header">
                     <div>
-                        <h2>ðŸ“¦ Estoque & Cadastro de Fotos</h2>
-                        <p id="stock-view-desc">Consulta de saldos e personalizaÃ§Ã£o das fotos dos produtos</p>
+                        <h2>📦 Estoque & Cadastro de Fotos</h2>
+                        <p id="stock-view-desc">Consulta de saldos e personalização das fotos dos produtos</p>
                     </div>
                     <div class="header-actions admin-only">
                         <button class="btn btn-secondary" onclick="app.openDuplicatesModal()" title="Localizar e limpar produtos duplicados">
-                            ðŸ§¹ Limpar Duplicados
+                            🧹 Limpar Duplicados
                         </button>
                         <button class="btn btn-primary" onclick="app.openNewProductModal()">
-                            âž• Cadastrar Produto
+                            ➕ Cadastrar Produto
                         </button>
                     </div>
                 </div>
@@ -244,10 +244,10 @@
                 <!-- Barra de Busca & Alerta de Duplicados -->
                 <div class="stock-toolbar" style="display: flex; gap: 10px; margin-bottom: 12px; align-items: center; flex-wrap: wrap;">
                     <div class="search-box" style="flex: 1; min-width: 240px; margin: 0;">
-                        <input type="text" id="stock-search-input" placeholder="ðŸ” Buscar no estoque (nome, categoria)..." oninput="app.filterStockTable(this.value)">
+                        <input type="text" id="stock-search-input" placeholder="🔍 Buscar no estoque (nome, categoria)..." oninput="app.filterStockTable(this.value)">
                     </div>
                     <div id="duplicate-alert-pill" class="duplicate-pill" style="display: none; cursor: pointer;" onclick="app.openDuplicatesModal()" title="Clique para ver os produtos duplicados">
-                        âš ï¸ <span id="duplicate-count-text">0 duplicados encontrados</span> &bull; <u>Resolver</u>
+                        ⚠️ <span id="duplicate-count-text">0 duplicados encontrados</span> &bull; <u>Resolver</u>
                     </div>
                 </div>
 
@@ -258,7 +258,7 @@
                         <span class="m-val" id="st-total-products">0</span>
                     </div>
                     <div class="metric-card warning">
-                        <span class="m-label">Estoque CrÃ­tico (< 5 un)</span>
+                        <span class="m-label">Estoque Crítico (< 5 un)</span>
                         <span class="m-val" id="st-critical-count">0</span>
                     </div>
                     <div class="metric-card info">
@@ -278,12 +278,12 @@
                                 <th>Foto</th>
                                 <th>Produto</th>
                                 <th>Categoria</th>
-                                <th class="admin-col">PreÃ§o Custo</th>
-                                <th>PreÃ§o Venda</th>
+                                <th class="admin-col">Preço Custo</th>
+                                <th>Preço Venda</th>
                                 <th class="admin-col">Margem</th>
                                 <th>Estoque Atual</th>
                                 <th>Status</th>
-                                <th class="text-right">AÃ§Ãµes</th>
+                                <th class="text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody id="stock-table-body">
@@ -299,12 +299,12 @@
             <div class="view-inner">
                 <div class="module-header">
                     <div>
-                        <h2>ðŸ’µ Fechamento de Turno & ConferÃªncia de Vias (EVO)</h2>
+                        <h2>💵 Fechamento de Turno & Conferência de Vias (EVO)</h2>
                         <p>Controle das vias da maquininha grampeadas no fechamento impresso</p>
                     </div>
                     <div class="header-actions">
                         <button class="btn btn-primary" onclick="app.printCashReport()">
-                            ðŸ–¨ï¸ Imprimir Espelho p/ Grampear no EVO
+                            🖨️ Imprimir Espelho p/ Grampear no EVO
                         </button>
                     </div>
                 </div>
@@ -313,24 +313,24 @@
                 <div class="evo-slips-card">
                     <div class="evo-slips-header">
                         <div>
-                            <h3>ðŸ“Ž ConferÃªncia de Vias & HistÃ³rico Geral de Vendas</h3>
-                            <p>Consulte as filipetas de cartÃ£o/Pix para grampear no caixa do EVO ou visualize todas as vendas desde a primeira (V01):</p>
+                            <h3>📎 Conferência de Vias & Histórico Geral de Vendas</h3>
+                            <p>Consulte as filipetas de cartão/Pix para grampear no caixa do EVO ou visualize todas as vendas desde a primeira (V01):</p>
                         </div>
                         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                            <input type="text" id="slips-search-input" placeholder="ðŸ” Filtrar venda (ex: V01, Pix, Baly...)" style="padding: 6px 10px; font-size: 8.5pt; border: 1px solid #cbd5e1; border-radius: 6px; min-width: 200px;" oninput="app.filterShiftSlips(this.value)">
-                            <button class="btn btn-sm btn-secondary" id="btn-slips-order" onclick="app.toggleSlipsOrder()" title="Alternar ordem de exibiÃ§Ã£o das vendas">â¬‡ï¸ Recente â†’ V01</button>
-                            <button class="btn btn-sm btn-secondary" id="toggle-slips-expand-btn" onclick="app.toggleSlipsExpand()" title="Expandir/Recolher tabela de vendas">â†•ï¸ Expandir</button>
+                            <input type="text" id="slips-search-input" placeholder="🔍 Filtrar venda (ex: V01, Pix, Baly...)" style="padding: 6px 10px; font-size: 8.5pt; border: 1px solid #cbd5e1; border-radius: 6px; min-width: 200px;" oninput="app.filterShiftSlips(this.value)">
+                            <button class="btn btn-sm btn-secondary" id="btn-slips-order" onclick="app.toggleSlipsOrder()" title="Alternar ordem de exibição das vendas">⬇️ Recente → V01</button>
+                            <button class="btn btn-sm btn-secondary" id="toggle-slips-expand-btn" onclick="app.toggleSlipsExpand()" title="Expandir/Recolher tabela de vendas">↕️ Expandir</button>
                             <span class="slips-counter-badge" id="slips-card-counter">0 vendas</span>
                         </div>
                     </div>
 
-                    <!-- AlternÃ¢ncia de Escopo: Todas as Vendas vs Turno Atual -->
+                    <!-- Alternância de Escopo: Todas as Vendas vs Turno Atual -->
                     <div style="display: flex; gap: 8px; margin: 12px 0 8px 0; align-items: center; flex-wrap: wrap;">
                         <button class="btn btn-sm btn-primary" id="btn-view-all-sales" onclick="app.setSlipsViewScope('all')">
-                            ðŸŒ Todas as Vendas (Desde a V01 atÃ© a mais recente)
+                            🌐 Todas as Vendas (Desde a V01 até a mais recente)
                         </button>
                         <button class="btn btn-sm btn-secondary" id="btn-view-shift-sales" onclick="app.setSlipsViewScope('shift')">
-                            â±ï¸ Apenas Turno Atual (Vendas em aberto)
+                            ⏱️ Apenas Turno Atual (Vendas em aberto)
                         </button>
                     </div>
 
@@ -338,9 +338,9 @@
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>CÃ³d. Venda</th>
+                                    <th>Cód. Venda</th>
                                     <th>Turno</th>
-                                    <th>Data / HorÃ¡rio</th>
+                                    <th>Data / Horário</th>
                                     <th>Forma Pagto</th>
                                     <th>Valor (R$)</th>
                                     <th>Itens Vendidos</th>
@@ -357,14 +357,14 @@
 
                 <div class="shift-grid" style="margin-top: 16px;">
                     <div class="shift-card">
-                        <h3>ðŸŸ¢ Resumo Financeiro do Turno</h3>
+                        <h3>🟢 Resumo Financeiro do Turno</h3>
                         <div class="shift-info-row">
-                            <span>Operador ResponsÃ¡vel:</span>
-                            <strong id="shift-operator-name">LetÃ­cia [F30188]</strong>
+                            <span>Operador Responsável:</span>
+                            <strong id="shift-operator-name">Letícia [F30188]</strong>
                         </div>
                         <div class="shift-info-row">
-                            <span>InÃ­cio do Turno:</span>
-                            <strong id="shift-start-time">Hoje Ã s 06:00</strong>
+                            <span>Início do Turno:</span>
+                            <strong id="shift-start-time">Hoje às 06:00</strong>
                         </div>
                         <div class="shift-info-row">
                             <span>Total de Vendas Registradas:</span>
@@ -373,15 +373,15 @@
 
                         <div class="shift-totals">
                             <div class="st-line">
-                                <span>ðŸ’  Recebido em Pix:</span>
+                                <span>💠 Recebido em Pix:</span>
                                 <strong id="shift-val-pix">R$ 0,00</strong>
                             </div>
                             <div class="st-line">
-                                <span>ðŸ’³ Recebido em CartÃ£o:</span>
+                                <span>💳 Recebido em Cartão:</span>
                                 <strong id="shift-val-card">R$ 0,00</strong>
                             </div>
                             <div class="st-line">
-                                <span>ðŸ’µ Recebido em Dinheiro:</span>
+                                <span>💵 Recebido em Dinheiro:</span>
                                 <strong id="shift-val-cash">R$ 0,00</strong>
                             </div>
                             <div class="st-line total">
@@ -391,9 +391,9 @@
                         </div>
 
                         <div class="shift-blind-check">
-                            <h4>ConferÃªncia da Gaveta de Dinheiro:</h4>
+                            <h4>Conferência da Gaveta de Dinheiro:</h4>
                             <div class="blind-input-group">
-                                <label>Valor contado em espÃ©cie na gaveta (R$):</label>
+                                <label>Valor contado em espécie na gaveta (R$):</label>
                                 <input type="number" id="blind-cash-input" placeholder="R$ 0,00" step="0.50">
                                 <button class="btn btn-warning" onclick="app.reconcileShift()">
                                     Auditar e Fechar Meu Turno
@@ -403,13 +403,13 @@
                         </div>
 
                         <button class="btn btn-sm btn-secondary" onclick="app.openShiftDetailsModal('active')" style="margin-top: 12px; width: 100%;">
-                            ðŸ” Ver Todas as Vendas Deste Turno em Detalhes
+                            🔍 Ver Todas as Vendas Deste Turno em Detalhes
                         </button>
                     </div>
 
                     <div class="history-card">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1.5px solid var(--border-color); padding-bottom: 8px;">
-                            <h3 style="margin: 0; border: none; padding: 0;">ðŸ“œ HistÃ³rico de Fechamentos Anteriores</h3>
+                            <h3 style="margin: 0; border: none; padding: 0;">📜 Histórico de Fechamentos Anteriores</h3>
                             <small style="color: #ea580c; font-weight: 600; font-size: 7.5pt;">(Clique no turno p/ ver vendas e reimprimir)</small>
                         </div>
                         <div class="history-list" id="shift-history-list">
@@ -425,33 +425,33 @@
             <div class="view-inner">
                 <div class="module-header">
                     <div>
-                        <h2>ðŸ›¡ï¸ Trilha de Auditoria & PrevenÃ§Ã£o a Fraudes</h2>
-                        <p>Registro imutÃ¡vel de todas as aÃ§Ãµes do sistema</p>
+                        <h2>🛡️ Trilha de Auditoria & Prevenção a Fraudes</h2>
+                        <p>Registro imutável de todas as ações do sistema</p>
                     </div>
                     <div class="header-actions">
                         <button class="btn btn-secondary" onclick="app.exportAuditLogs()">
-                            ðŸ“¥ Exportar CSV
+                            📥 Exportar CSV
                         </button>
                     </div>
                 </div>
 
                 <!-- Sub-abas -->
                 <div class="audit-subtabs" style="display:flex;gap:8px;margin-bottom:16px;">
-                    <button class="btn btn-sm" id="audit-tab-vendas" onclick="app.switchAuditTab('vendas')" style="font-weight:bold;">ðŸ§¾ Vendas</button>
-                    <button class="btn btn-sm btn-secondary" id="audit-tab-eventos" onclick="app.switchAuditTab('eventos')">ðŸ“‹ Todos os Eventos</button>
+                    <button class="btn btn-sm" id="audit-tab-vendas" onclick="app.switchAuditTab('vendas')" style="font-weight:bold;">🧾 Vendas</button>
+                    <button class="btn btn-sm btn-secondary" id="audit-tab-eventos" onclick="app.switchAuditTab('eventos')">📋 Todos os Eventos</button>
                 </div>
 
                 <!-- Filtros de Vendas -->
                 <div id="audit-filters-vendas" class="audit-filters">
-                    <input type="text" id="audit-search" placeholder="ðŸ” Filtrar por cÃ³digo da venda (ex: V01), funcionÃ¡rio, produto ou pagamento..." oninput="app.filterAudit(this.value)">
+                    <input type="text" id="audit-search" placeholder="🔍 Filtrar por código da venda (ex: V01), funcionário, produto ou pagamento..." oninput="app.filterAudit(this.value)">
                 </div>
 
                 <!-- Filtros de Eventos -->
                 <div id="audit-filters-eventos" class="audit-filters" style="display:none;">
                     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                        <input type="text" id="audit-event-search" placeholder="ðŸ” Buscar por operador, ID, detalhes..." oninput="app.filterAuditEvents()" style="flex:1;min-width:200px;">
+                        <input type="text" id="audit-event-search" placeholder="🔍 Buscar por operador, ID, detalhes..." oninput="app.filterAuditEvents()" style="flex:1;min-width:200px;">
                         <select id="audit-action-filter" onchange="app.filterAuditEvents()" style="padding:8px;border:1px solid #d1d5db;border-radius:8px;">
-                            <option value="">Todas as aÃ§Ãµes</option>
+                            <option value="">Todas as ações</option>
                         </select>
                         <input type="date" id="audit-date-from" onchange="app.filterAuditEvents()" style="padding:8px;border:1px solid #d1d5db;border-radius:8px;" title="Data inicial">
                         <input type="date" id="audit-date-to" onchange="app.filterAuditEvents()" style="padding:8px;border:1px solid #d1d5db;border-radius:8px;" title="Data final">
@@ -463,14 +463,14 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>CÃ³digo</th>
+                                <th>Código</th>
                                 <th>Data & Hora</th>
                                 <th>Operador</th>
                                 <th>Itens Vendidos</th>
                                 <th>Forma de Pagamento</th>
                                 <th>Valor Total</th>
                                 <th>Status</th>
-                                <th class="text-right">AÃ§Ã£o Admin</th>
+                                <th class="text-right">Ação Admin</th>
                             </tr>
                         </thead>
                         <tbody id="audit-table-body">
@@ -485,7 +485,7 @@
                         <thead>
                             <tr>
                                 <th style="width:160px;">Data & Hora</th>
-                                <th style="width:140px;">AÃ§Ã£o</th>
+                                <th style="width:140px;">Ação</th>
                                 <th style="width:80px;">Tipo</th>
                                 <th style="width:80px;">ID</th>
                                 <th>Operador</th>
@@ -500,17 +500,17 @@
             </div>
         </main>
 
-        <!-- ==================== VIEW 5: GESTÃƒO DE EQUIPE (ADMIN ONLY) ==================== -->
+        <!-- ==================== VIEW 5: GESTÃO DE EQUIPE (ADMIN ONLY) ==================== -->
         <main id="view-equipe" class="view-content admin-only">
             <div class="view-inner">
                 <div class="module-header">
                     <div>
-                        <h2>ðŸ‘¥ GestÃ£o de Colaboradores & CÃ³digos de Acesso</h2>
-                        <p>Cadastre os cÃ³digos de acesso, nomes e funÃ§Ãµes dos colaboradores</p>
+                        <h2>👥 Gestão de Colaboradores & Códigos de Acesso</h2>
+                        <p>Cadastre os códigos de acesso, nomes e funções dos colaboradores</p>
                     </div>
                     <div class="header-actions">
                         <button class="btn btn-primary" onclick="app.openNewUserModal()">
-                            âž• Cadastrar Colaborador
+                            ➕ Cadastrar Colaborador
                         </button>
                     </div>
                 </div>
@@ -519,11 +519,11 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>CÃ³digo</th>
+                                <th>Código</th>
                                 <th>Nome do Colaborador</th>
-                                <th>Cargo / FunÃ§Ã£o</th>
+                                <th>Cargo / Função</th>
                                 <th>Perfil de Acesso</th>
-                                <th class="text-right">AÃ§Ãµes</th>
+                                <th class="text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody id="users-table-body">
@@ -539,12 +539,12 @@
             <div class="view-inner">
                 <div class="module-header">
                     <div>
-                        <h2>ðŸ“Š Dashboard Executivo (ERP)</h2>
-                        <p>VisÃ£o financeira, operacional e de performance por operador</p>
+                        <h2>📊 Dashboard Executivo (ERP)</h2>
+                        <p>Visão financeira, operacional e de performance por operador</p>
                     </div>
                     <div class="header-actions">
                         <button class="btn btn-primary" onclick="app.backupDatabase()">
-                            ðŸ’¾ Backup (JSON)
+                            💾 Backup (JSON)
                         </button>
                     </div>
                 </div>
@@ -572,7 +572,7 @@
                 <!-- KPIs Linha 2: Operacional -->
                 <div class="stock-summary-cards" style="margin-top:12px;">
                     <div class="metric-card warning">
-                        <span class="m-label">Ticket MÃ©dio</span>
+                        <span class="m-label">Ticket Médio</span>
                         <span class="m-val" id="dash-ticket-medio">R$ 0,00</span>
                     </div>
                     <div class="metric-card">
@@ -592,7 +592,7 @@
                 <div class="dashboard-grid">
                     <!-- Top 5 Produtos -->
                     <div class="dash-card">
-                        <h3>ðŸ† Top 5 Produtos Mais Vendidos</h3>
+                        <h3>🏆 Top 5 Produtos Mais Vendidos</h3>
                         <div class="top-products-list" id="dash-top-products">
                             <!-- Inserido dinamicamente -->
                         </div>
@@ -600,7 +600,7 @@
 
                     <!-- Vendas por Pagamento -->
                     <div class="dash-card">
-                        <h3>ðŸ’³ Vendas por Meio de Pagamento</h3>
+                        <h3>💳 Vendas por Meio de Pagamento</h3>
                         <div class="pay-distribution" id="dash-pay-distribution">
                             <!-- Inserido dinamicamente -->
                         </div>
@@ -608,7 +608,7 @@
 
                     <!-- Ranking de Operadores -->
                     <div class="dash-card">
-                        <h3>ðŸ‘¥ Ranking de Operadores</h3>
+                        <h3>👥 Ranking de Operadores</h3>
                         <div id="dash-operator-ranking">
                             <!-- Inserido dinamicamente -->
                         </div>
@@ -616,7 +616,7 @@
 
                     <!-- Top 5 Produtos por Lucro -->
                     <div class="dash-card">
-                        <h3>ðŸ’° Top 5 Produtos por Lucro</h3>
+                        <h3>💰 Top 5 Produtos por Lucro</h3>
                         <div id="dash-top-profit">
                             <!-- Inserido dinamicamente -->
                         </div>
@@ -642,22 +642,22 @@
                 
                 <div class="form-group">
                     <label>Nome do Produto:</label>
-                    <input type="text" id="prod-name" placeholder="Ex: Baly MaÃ§Ã£ Verde 473ml">
+                    <input type="text" id="prod-name" placeholder="Ex: Baly Maçã Verde 473ml">
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Categoria:</label>
                         <select id="prod-category">
-                            <option value="bebidas">ðŸ¥¤ Bebidas & EnergÃ©ticos (Ãguas, Baly, IsotÃ´nicos)</option>
-                            <option value="proteicos">ðŸ« Barrinhas & Whey (Bold, Nutrata, Crisp, 3 CoraÃ§Ãµes)</option>
-                            <option value="suplementos">ðŸ‹ï¸ Suplementos & Doses (PrÃ©-treino, Creatina)</option>
-                            <option value="roupas">ðŸ‘• Roupas & VestuÃ¡rio (Camisetas, Regatas, Tops, Shorts)</option>
-                            <option value="acessorios">ðŸŽ’ AcessÃ³rios & Brindes (Garrafas, Copos, Chaveiros, Coqueteleiras)</option>
+                            <option value="bebidas">🥤 Bebidas & Energéticos (Águas, Baly, Isotônicos)</option>
+                            <option value="proteicos">🍫 Barrinhas & Whey (Bold, Nutrata, Crisp, 3 Corações)</option>
+                            <option value="suplementos">🏋️ Suplementos & Doses (Pré-treino, Creatina)</option>
+                            <option value="roupas">👕 Roupas & Vestuário (Camisetas, Regatas, Tops, Shorts)</option>
+                            <option value="acessorios">🎒 Acessórios & Brindes (Garrafas, Copos, Chaveiros, Coqueteleiras)</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Emoji / Ãcone:</label>
-                        <input type="text" id="prod-icon" placeholder="Ex: âš¡ ou ðŸ¥¤">
+                        <label>Emoji / Ícone:</label>
+                        <input type="text" id="prod-icon" placeholder="Ex: ⚡ ou 🥤">
                     </div>
                 </div>
                 
@@ -666,7 +666,7 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                         <label style="margin-bottom:0;">Foto do Produto (Opcional):</label>
                         <button type="button" class="btn btn-sm btn-danger" id="btn-remove-prod-photo" style="display: none; height: 22px; padding: 0 8px; font-size: 7.5pt;" onclick="app.removeProductPhotoFromModal()">
-                            ðŸ—‘ï¸ Remover Foto
+                            🗑️ Remover Foto
                         </button>
                     </div>
                     <div class="photo-upload-container">
@@ -680,11 +680,11 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label>PreÃ§o de Custo (R$):</label>
+                        <label>Preço de Custo (R$):</label>
                         <input type="number" id="prod-cost" step="0.10" placeholder="0.00">
                     </div>
                     <div class="form-group">
-                        <label>PreÃ§o de Venda (R$):</label>
+                        <label>Preço de Venda (R$):</label>
                         <input type="number" id="prod-price" step="0.10" placeholder="0.00">
                     </div>
                 </div>
@@ -694,14 +694,14 @@
                         <input type="number" id="prod-stock" placeholder="0">
                     </div>
                     <div class="form-group">
-                        <label>Estoque MÃ­nimo de Alerta:</label>
+                        <label>Estoque Mínimo de Alerta:</label>
                         <input type="number" id="prod-min-stock" value="5">
                     </div>
                 </div>
             </div>
             <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
                 <button type="button" class="btn btn-danger admin-only" id="btn-modal-delete-prod" style="display: none;" onclick="app.deleteCurrentEditingProduct()">
-                    ðŸ—‘ï¸ Excluir Produto
+                    🗑️ Excluir Produto
                 </button>
                 <div style="display: flex; gap: 8px; margin-left: auto;">
                     <button class="btn btn-secondary" onclick="app.closeProductModal()">Cancelar</button>
@@ -711,11 +711,11 @@
         </div>
     </div>
 
-    <!-- Modal RÃ¡pido: Alterar Foto do Produto (DisponÃ­vel para RecepÃ§Ã£o e Gestores) -->
+    <!-- Modal Rápido: Alterar Foto do Produto (Disponível para Recepção e Gestores) -->
     <div id="quick-photo-modal" class="modal-overlay">
         <div class="modal-card">
             <div class="modal-header">
-                <h3>ðŸ“· Cadastrar / Alterar Foto do Produto</h3>
+                <h3>📷 Cadastrar / Alterar Foto do Produto</h3>
                 <button class="close-btn" onclick="app.closeQuickPhotoModal()">&times;</button>
             </div>
             <div class="modal-body">
@@ -734,7 +734,7 @@
             </div>
             <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
                 <button type="button" class="btn btn-danger" id="btn-quick-remove-photo" style="display: none;" onclick="app.removeQuickPhoto()">
-                    ðŸ—‘ï¸ Remover Foto
+                    🗑️ Remover Foto
                 </button>
                 <div style="display: flex; gap: 8px; margin-left: auto;">
                     <button class="btn btn-secondary" onclick="app.closeQuickPhotoModal()">Cancelar</button>
@@ -749,7 +749,7 @@
         <div class="modal-card" style="max-width: 880px; width: 95%;">
             <div class="modal-header">
                 <div>
-                    <h3 id="shift-modal-title" style="margin: 0; font-size: 13pt;">ðŸ“‹ Detalhes do Turno & Vendas</h3>
+                    <h3 id="shift-modal-title" style="margin: 0; font-size: 13pt;">📋 Detalhes do Turno & Vendas</h3>
                     <p id="shift-modal-subtitle" style="margin: 3px 0 0 0; font-size: 8.5pt; color: #64748b;"></p>
                 </div>
                 <button class="close-btn" onclick="app.closeShiftDetailsModal()">&times;</button>
@@ -771,15 +771,15 @@
                         <small id="shift-modal-kpi-diff" style="font-size: 7pt; color: #64748b;"></small>
                     </div>
                     <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px;">
-                        <span style="font-size: 7.5pt; color: #1e40af; font-weight: 700; text-transform: uppercase;">CartÃµes & Pix (Vias)</span>
+                        <span style="font-size: 7.5pt; color: #1e40af; font-weight: 700; text-transform: uppercase;">Cartões & Pix (Vias)</span>
                         <div id="shift-modal-kpi-cardpix" style="font-size: 11pt; font-weight: 800; color: #2563eb; margin-top: 4px;">R$ 0,00</div>
                     </div>
                 </div>
 
                 <!-- Barra de Busca de Vendas do Turno -->
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 10px; flex-wrap: wrap;">
-                    <h4 style="margin: 0; font-size: 10pt; color: #0f172a;">ðŸ§¾ Todas as Vendas Deste Turno:</h4>
-                    <input type="text" id="shift-modal-search" placeholder="ðŸ” Filtrar por cÃ³digo (V01), produto, pagamento..." 
+                    <h4 style="margin: 0; font-size: 10pt; color: #0f172a;">🧾 Todas as Vendas Deste Turno:</h4>
+                    <input type="text" id="shift-modal-search" placeholder="🔍 Filtrar por código (V01), produto, pagamento..." 
                            style="padding: 6px 12px; font-size: 8.5pt; border: 1px solid #cbd5e1; border-radius: 6px; width: 280px;" 
                            oninput="app.filterShiftModalSales(this.value)">
                 </div>
@@ -789,8 +789,8 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th style="width: 75px;">CÃ³d.</th>
-                                <th style="width: 75px;">HorÃ¡rio</th>
+                                <th style="width: 75px;">Cód.</th>
+                                <th style="width: 75px;">Horário</th>
                                 <th style="width: 120px;">Forma Pagto</th>
                                 <th style="width: 95px;">Valor (R$)</th>
                                 <th>Itens Vendidos</th>
@@ -807,10 +807,10 @@
                 <button class="btn btn-secondary" onclick="app.closeShiftDetailsModal()">Fechar</button>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     <button class="btn btn-secondary" id="btn-export-shift-csv" onclick="app.exportCurrentModalShiftCSV()">
-                        ðŸ“¥ Exportar CSV
+                        📥 Exportar CSV
                     </button>
                     <button class="btn btn-primary" id="btn-print-shift-evo" onclick="app.printCurrentModalShift()">
-                        ðŸ–¨ï¸ Reimprimir Espelho de Caixa (PadrÃ£o EVO)
+                        🖨️ Reimprimir Espelho de Caixa (Padrão EVO)
                     </button>
                 </div>
             </div>
@@ -821,7 +821,7 @@
     <div id="restock-modal" class="modal-overlay admin-only">
         <div class="modal-card">
             <div class="modal-header">
-                <h3>ðŸ“¦ Entrada de Estoque (ReposiÃ§Ã£o)</h3>
+                <h3>📦 Entrada de Estoque (Reposição)</h3>
                 <button class="close-btn" onclick="app.closeRestockModal()">&times;</button>
             </div>
             <div class="modal-body">
@@ -843,28 +843,28 @@
     <div id="user-modal" class="modal-overlay">
         <div class="modal-card">
             <div class="modal-header">
-                <h3 id="user-modal-title">ðŸ‘¥ Cadastrar / Editar Colaborador</h3>
+                <h3 id="user-modal-title">👥 Cadastrar / Editar Colaborador</h3>
                 <button class="close-btn" onclick="app.closeUserModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label>CÃ³digo do FuncionÃ¡rio (Ex: f10001, rec01):</label>
+                    <label>Código do Funcionário (Ex: f10001, rec01):</label>
                     <input type="text" id="user-code-input" placeholder="Ex: f10001" required>
                 </div>
                 <div class="form-group">
                     <label>Nome do Colaborador:</label>
-                    <input type="text" id="user-name-input" placeholder="Ex: LetÃ­cia Santos" required>
+                    <input type="text" id="user-name-input" placeholder="Ex: Letícia Santos" required>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Cargo / FunÃ§Ã£o:</label>
-                        <input type="text" id="user-title-input" placeholder="Ex: Recepcionista BalcÃ£o">
+                        <label>Cargo / Função:</label>
+                        <input type="text" id="user-title-input" placeholder="Ex: Recepcionista Balcão">
                     </div>
                     <div class="form-group">
                         <label>Perfil de Acesso:</label>
                         <select id="user-role-input">
                             <option value="OPERADOR">OPERADOR (Apenas Frente de Caixa & Estoque)</option>
-                            <option value="ADMIN">ADMIN (GestÃ£o Total, Auditoria e Lucros)</option>
+                            <option value="ADMIN">ADMIN (Gestão Total, Auditoria e Lucros)</option>
                         </select>
                     </div>
                 </div>
@@ -880,17 +880,17 @@
     <div id="cancel-modal" class="modal-overlay">
         <div class="modal-card">
             <div class="modal-header">
-                <h3>âš ï¸ Cancelar Venda (Auditoria)</h3>
+                <h3>⚠️ Cancelar Venda (Auditoria)</h3>
                 <button class="close-btn" onclick="app.closeCancelModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="cancel-sale-id">
                 <p style="color: #ef4444; font-size: 9pt; margin-bottom: 10px;">
-                    O cancelamento devolverÃ¡ os itens ao estoque e registrarÃ¡ o operador e a justificativa no log de auditoria.
+                    O cancelamento devolverá os itens ao estoque e registrará o operador e a justificativa no log de auditoria.
                 </p>
                 <div class="form-group">
-                    <label>Justificativa do Cancelamento (ObrigatÃ³rio):</label>
-                    <textarea id="cancel-reason" placeholder="Ex: Cliente desistiu antes do pagamento, erro de digitaÃ§Ã£o, etc." rows="3"></textarea>
+                    <label>Justificativa do Cancelamento (Obrigatório):</label>
+                    <textarea id="cancel-reason" placeholder="Ex: Cliente desistiu antes do pagamento, erro de digitação, etc." rows="3"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
@@ -904,10 +904,10 @@
     <div id="success-modal" class="modal-overlay">
         <div class="modal-card text-center" style="max-width: 420px;">
             <div class="sale-code-highlight-box">
-                <span class="code-badge-label">CÃ“DIGO DA VENDA</span>
+                <span class="code-badge-label">CÓDIGO DA VENDA</span>
                 <div class="huge-sale-code" id="modal-sale-code">V01</div>
                 <div class="staple-evo-instruction">
-                    âœï¸ <strong>ANOTE COM CANETA NA VIA DA MAQUININHA:</strong><br>
+                    ✍️ <strong>ANOTE COM CANETA NA VIA DA MAQUININHA:</strong><br>
                     Escreva <span class="highlight-code" id="modal-code-text">V01</span> na filipeta e grampeie no caixa impresso do EVO!
                 </div>
             </div>
@@ -915,24 +915,24 @@
             <div class="receipt-preview" id="receipt-preview"></div>
             
             <button class="btn btn-primary" style="width: 100%; height: 46px; font-size: 11pt; margin-top: 14px;" onclick="app.closeSuccessModal()">
-                âž• PrÃ³xima Venda
+                ➕ Próxima Venda
             </button>
             <button class="btn" id="btn-cancel-last-sale" style="width: 100%; height: 40px; font-size: 10pt; margin-top: 8px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5;" onclick="app.cancelLastSale()">
-                âŒ Cancelar Esta Venda (erro de operaÃ§Ã£o)
+                ❌ Cancelar Esta Venda (erro de operação)
             </button>
         </div>
     </div>
 
-    <!-- Modal: ConfiguraÃ§Ã£o da Nuvem Supabase (Apenas ADMIN) -->
+    <!-- Modal: Configuração da Nuvem Supabase (Apenas ADMIN) -->
     <div id="supabase-config-modal" class="modal-overlay admin-only">
         <div class="modal-card" style="max-width: 500px;">
             <div class="modal-header">
-                <h3>âš¡ ConfiguraÃ§Ã£o do Supabase Cloud (Realtime)</h3>
-                <button class="close-modal-btn" onclick="app.closeSupabaseModal()">âœ•</button>
+                <h3>⚡ Configuração do Supabase Cloud (Realtime)</h3>
+                <button class="close-modal-btn" onclick="app.closeSupabaseModal()">✕</button>
             </div>
             <div class="modal-body">
                 <p style="font-size: 9pt; color: #64748b; margin-bottom: 12px;">
-                    Conecte o PDV ao seu banco de dados em nuvem Supabase para ativar a sincronizaÃ§Ã£o em tempo real e concorrÃªncia sem colisÃµes.
+                    Conecte o PDV ao seu banco de dados em nuvem Supabase para ativar a sincronização em tempo real e concorrência sem colisões.
                 </p>
                 <div class="form-group">
                     <label>Supabase Project URL:</label>
@@ -945,8 +945,8 @@
                 <div id="supabase-test-result" style="margin-top: 10px; font-size: 9pt; display: none;"></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="app.testSupabaseConnection()">ðŸ§ª Testar ConexÃ£o</button>
-                <button class="btn btn-primary" onclick="app.saveSupabaseConfig()">ðŸ’¾ Salvar & Conectar</button>
+                <button class="btn btn-secondary" onclick="app.testSupabaseConnection()">🧪 Testar Conexão</button>
+                <button class="btn btn-primary" onclick="app.saveSupabaseConfig()">💾 Salvar & Conectar</button>
             </div>
         </div>
     </div>
@@ -955,12 +955,12 @@
     <div id="duplicates-modal" class="modal-overlay">
         <div class="modal-card" style="max-width: 650px;">
             <div class="modal-header">
-                <h3>ðŸ§¹ Limpeza & Mesclagem de Produtos Duplicados</h3>
+                <h3>🧹 Limpeza & Mesclagem de Produtos Duplicados</h3>
                 <button class="close-btn" onclick="app.closeDuplicatesModal()">&times;</button>
             </div>
             <div class="modal-body" style="max-height: 480px; overflow-y: auto;">
                 <p style="font-size: 8.5pt; color: #64748b; margin-bottom: 14px;">
-                    O sistema analisou seu catÃ¡logo e agrupou os itens com nomes idÃªnticos ou semelhantes. Escolha <strong>Excluir</strong> para remover o item duplicado ou <strong>Mesclar</strong> para somar o estoque no produto principal.
+                    O sistema analisou seu catálogo e agrupou os itens com nomes idênticos ou semelhantes. Escolha <strong>Excluir</strong> para remover o item duplicado ou <strong>Mesclar</strong> para somar o estoque no produto principal.
                 </p>
                 <div id="duplicates-list-container">
                     <!-- Preenchido dinamicamente via JS -->
@@ -972,7 +972,7 @@
         </div>
     </div>
 
-    <!-- ==================== ESPELHO DE FECHAMENTO PROFISSIONAL (PADRÃƒO EVO - IMPRESSÃƒO PRETO E BRANCO) ==================== -->
+    <!-- ==================== ESPELHO DE FECHAMENTO PROFISSIONAL (PADRÃO EVO - IMPRESSÃO PRETO E BRANCO) ==================== -->
     <div id="evo-print-sheet" class="print-only"></div>
 
     <!-- Supabase JS Client (CDN) -->
