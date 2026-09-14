@@ -547,27 +547,27 @@ window.app = {
     selectPaymentMethod,
     calculateChange,
     finalizeSale: () => finalizeSale({
-        getState: () => state,
-        getCurrentUser: () => currentUser,
-        getUseSupabase: () => useSupabase,
-        syncWithSupabase,
-        renderAll,
-        saveLocalState,
-        getApiBase: () => API_BASE,
-        authFetch
+        cart: getCart(),
+        paymentMethod: getSelectedPaymentMethod(),
+        currentUser,
+        state,
+        useSupabase,
+        apiBase: API_BASE,
+        onSuccess: (sale) => { resetCart(); renderAll(); },
+        onSyncSupabase: () => syncWithSupabase(false),
+        onSyncServer: () => syncWithServer(false),
+        onStateChanged: (newState) => { saveLocalState(newState); renderAll(); }
     }),
 
     // Vendas
     showSuccessModal,
     closeSuccessModal,
     cancelLastSale: () => cancelLastSale({
-        getState: () => state,
-        getCurrentUser: () => currentUser,
-        getUseSupabase: () => useSupabase,
-        syncWithSupabase,
-        renderAll,
-        getApiBase: () => API_BASE,
-        authFetch
+        currentUser,
+        useSupabase,
+        apiBase: API_BASE,
+        onSyncSupabase: () => syncWithSupabase(false),
+        onSyncServer: () => syncWithServer(false),
     }),
 
     // Turnos & Conferência
