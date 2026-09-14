@@ -10,6 +10,7 @@
 // ── Core ────────────────────────────────────
 import { escapeHtml } from './helpers.js';
 import { ROLES, ROLE_LABELS, ROLE_AVATARS, APP_VERSION } from './constants.js';
+import { initSupabase } from '../services/supabase-client.js';
 
 // ── Módulos (Fases 3-7) ─────────────────────
 import {
@@ -649,6 +650,8 @@ async function init() {
     
     if (supabaseOk) {
         useSupabase = true;
+        // Also initialize the modular supabase-client for data-service.js
+        initSupabase(window.SUPABASE_CONFIG);
         console.log('⚡ Modo Supabase Cloud Realtime Ativado.');
         await syncWithSupabase(false);
         window.supabaseAdapter.subscribeRealtime((type, payload) => handleRealtimeUpdate(type, payload));
