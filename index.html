@@ -900,6 +900,61 @@
         </div>
     </div>
 
+    <!-- Modal de Fechamento de Caixa -->
+    <div id="shift-closed-modal" class="modal-overlay">
+        <div class="modal-card text-center" style="max-width: 480px;">
+            <div class="shift-closed-header">
+                <div class="shift-closed-icon">🔒</div>
+                <h2 style="margin: 8px 0 4px; font-size: 18pt; color: #1e293b;">Caixa Fechado com Sucesso!</h2>
+            </div>
+
+            <div class="shift-closed-badge-box">
+                <span class="code-badge-label">TURNO ENCERRADO</span>
+                <span class="shift-closed-code" id="sc-shift-code">T00</span>
+            </div>
+
+            <div style="margin: 12px 0; color: #64748b; font-size: 9pt;">
+                <span>👤 <strong id="sc-operator">—</strong></span><br>
+                <span>🕐 <span id="sc-end-time">—</span></span>
+            </div>
+
+            <div class="shift-closed-details-grid">
+                <div class="sc-stat">
+                    <span class="sc-label">🧾 Vendas</span>
+                    <span class="sc-val" id="sc-total-sales">0</span>
+                </div>
+                <div class="sc-stat">
+                    <span class="sc-label">💰 Faturamento</span>
+                    <span class="sc-val" style="color: #ea580c;" id="sc-total-revenue">R$ 0,00</span>
+                </div>
+                <div class="sc-stat">
+                    <span class="sc-label">🖥️ Sist. Espécie</span>
+                    <span class="sc-val" id="sc-system-cash">R$ 0,00</span>
+                </div>
+                <div class="sc-stat">
+                    <span class="sc-label">💵 Gaveta Contada</span>
+                    <span class="sc-val" id="sc-counted-cash">R$ 0,00</span>
+                </div>
+            </div>
+
+            <div id="sc-diff-banner" class="shift-diff-banner match">
+                <span>✅ Gaveta Conferida — Sem Divergência</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 16px;">
+                <button class="btn btn-success" style="font-size: 11pt; padding: 12px;" onclick="app.printCashReport()">
+                    🖨️ Imprimir Espelho do Turno (Via EVO)
+                </button>
+                <button class="btn btn-primary" onclick="app.finishShiftAndGoToPDV()">
+                    🛒 Ir para Frente de Caixa (Próximo Turno)
+                </button>
+                <button class="btn btn-secondary" onclick="app.closeShiftClosedModal()" style="font-size: 9pt;">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal de Sucesso V01 -->
     <div id="success-modal" class="modal-overlay">
         <div class="modal-card text-center" style="max-width: 420px;">

@@ -237,25 +237,45 @@ export async function reconcileShift() {
     const opCode = currentUser ? currentUser.code.toUpperCase() : 'F20729';
     const opName = currentUser ? `${currentUser.name} [${opCode}]` : 'Luan [F20729]';
 
+    // ── Confirmação Prévia ──────────────────────
+    if (countedCash === 0) {
+        const zeroConfirm = confirm(
+            '⚠️ ATENÇÃO: Você está fechando o caixa com R$ 0,00 em espécie na gaveta.\n\n' +
+            'Tem certeza que deseja prosseguir com a conferência zerada?\n\n' +
+            'Operador: ' + opName
+        );
+        if (!zeroConfirm) return;
+    } else {
+        const confirmMsg = confirm(
+            '🔒 CONFIRMAÇÃO DE FECHAMENTO DE CAIXA\n\n' +
+            'Operador: ' + opName + '\n' +
+            'Valor contado na gaveta: R$ ' + countedCash.toFixed(2).replace('.', ',') + '\n\n' +
+            'Deseja confirmar o fechamento do turno com este valor?'
+        );
+        if (!confirmMsg) return;
+    }
+
+    // ── Fechamento via Supabase ─────────────────
     if (useSupabase) {
         try {
             const opId = currentUser ? currentUser.id : 'f20729';
             const { closeShift } = await import('../services/data-service.js');
             const res = await closeShift(countedCash, opId, opName);
             
-            const resultBox = document.getElementById('blind-result-box');
-            if (resultBox) {
-                resultBox.style.display = 'block';
-                const diff = res.diff;
-                if (Math.abs(diff) < CASH_DIFF_TOLERANCE) {
-                    resultBox.className = 'reconcile-box match';
-                    resultBox.innerHTML = `✅ <strong>Turno Fechado e Conferido com Sucesso no Supabase Cloud!</strong><br>Operador: ${escapeHtml(opName)}<br>Dinheiro em Gaveta: ${formatCurrency(countedCash)} (Divergência: R$ 0,00).`;
-                } else {
-                    resultBox.className = 'reconcile-box diff';
-                    resultBox.innerHTML = `⚠️ <strong>Divergência Registrada no Fechamento:</strong><br>Operador: ${escapeHtml(opName)}<br>Diferença: ${diff > 0 ? '+' + formatCurrency(diff) + ' (Sobra)' : '-' + formatCurrency(Math.abs(diff)) + ' (Falta)'}`;
-                }
-            }
             await _config.syncWithSupabase(false);
+            
+            showShiftClosedModal({
+                shiftCode: res.shiftCode || _config.getState().activeShift?.shiftCode || 'N/A',
+                operatorName: opName,
+                totalSales: res.totalSales || 0,
+                totalRevenue: res.totalRevenue || 0,
+                countedCash: countedCash,
+                systemCash: res.systemCash || 0,
+                diff: res.diff || 0,
+                endTime: new Date().toISOString()
+            });
+            
+            if (blindCashInput) blindCashInput.value = '';
             return;
         } catch (e) {
             console.error('❌ Erro ao fechar turno no Supabase:', e);
@@ -264,6 +284,7 @@ export async function reconcileShift() {
         }
     }
 
+    // ── Fechamento via API Local ─────────────────
     try {
         const res = await _config.authFetch(`${_config.getApiBase()}/api/shift/close`, {
             method: 'POST',
@@ -277,30 +298,87 @@ export async function reconcileShift() {
 
         if (res.ok) {
             const data = await res.json();
-            
-            // Set state via returned data and save locally
             Object.assign(_config.getState(), data.state);
             _config.saveLocalState(data.state);
             
-            const resultBox = document.getElementById('blind-result-box');
-            if (resultBox) {
-                resultBox.style.display = 'block';
-                const diff = data.closedShift.diff;
-                
-                if (Math.abs(diff) < CASH_DIFF_TOLERANCE) {
-                    resultBox.className = 'reconcile-box match';
-                    resultBox.innerHTML = `✅ <strong>Turno Fechado e Conferido com Sucesso!</strong><br>Operador: ${escapeHtml(opName)}<br>Dinheiro em Gaveta: ${formatCurrency(countedCash)} (Divergência: R$ 0,00).`;
-                } else {
-                    resultBox.className = 'reconcile-box diff';
-                    resultBox.innerHTML = `⚠️ <strong>Divergência Registrada no Fechamento:</strong><br>Operador: ${escapeHtml(opName)}<br>Diferença: ${diff > 0 ? '+' + formatCurrency(diff) + ' (Sobra)' : '-' + formatCurrency(Math.abs(diff)) + ' (Falta)'}`;
-                }
-            }
+            showShiftClosedModal({
+                shiftCode: data.closedShift?.shiftCode || 'N/A',
+                operatorName: opName,
+                totalSales: data.closedShift?.totalSales || 0,
+                totalRevenue: data.closedShift?.totalRevenue || 0,
+                countedCash: countedCash,
+                systemCash: data.closedShift?.systemCash || 0,
+                diff: data.closedShift?.diff || 0,
+                endTime: new Date().toISOString()
+            });
+            
+            if (blindCashInput) blindCashInput.value = '';
         }
     } catch (e) {
         alert('⚠️ Fechamento gravado localmente.');
     }
 
     _config.renderAll();
+}
+
+/**
+ * Shows the shift closed success modal with financial details.
+ * @param {Object} shiftData - Closed shift data
+ */
+export function showShiftClosedModal(shiftData) {
+    const modal = document.getElementById('shift-closed-modal');
+    if (!modal) return;
+
+    const diff = shiftData.diff || 0;
+    let diffBannerClass, diffIcon, diffText;
+    
+    if (Math.abs(diff) < CASH_DIFF_TOLERANCE) {
+        diffBannerClass = 'match';
+        diffIcon = '✅';
+        diffText = 'Gaveta Conferida — Sem Divergência';
+    } else if (diff > 0) {
+        diffBannerClass = 'diff-over';
+        diffIcon = '🔼';
+        diffText = `Sobra de ${formatCurrency(diff)} na gaveta`;
+    } else {
+        diffBannerClass = 'diff-under';
+        diffIcon = '🔻';
+        diffText = `Falta de ${formatCurrency(Math.abs(diff))} na gaveta`;
+    }
+
+    const endTimeFormatted = new Date(shiftData.endTime).toLocaleString('pt-BR');
+
+    document.getElementById('sc-shift-code').innerText = shiftData.shiftCode;
+    document.getElementById('sc-operator').innerText = shiftData.operatorName;
+    document.getElementById('sc-end-time').innerText = endTimeFormatted;
+    document.getElementById('sc-total-sales').innerText = shiftData.totalSales;
+    document.getElementById('sc-total-revenue').innerText = formatCurrency(shiftData.totalRevenue);
+    document.getElementById('sc-system-cash').innerText = formatCurrency(shiftData.systemCash);
+    document.getElementById('sc-counted-cash').innerText = formatCurrency(shiftData.countedCash);
+    
+    const diffBanner = document.getElementById('sc-diff-banner');
+    diffBanner.className = 'shift-diff-banner ' + diffBannerClass;
+    diffBanner.innerHTML = `<span>${diffIcon} ${diffText}</span>`;
+
+    modal.classList.add('active');
+}
+
+/**
+ * Closes the shift closed success modal.
+ */
+export function closeShiftClosedModal() {
+    const modal = document.getElementById('shift-closed-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+/**
+ * Closes modal and navigates to POS for next shift.
+ */
+export function finishShiftAndGoToPDV() {
+    closeShiftClosedModal();
+    // Navigate to Frente de Caixa tab
+    const navFn = window.app?.navigateTo;
+    if (navFn) navFn('pos');
 }
 
 /**

@@ -36,7 +36,8 @@ import {
     configureShifts, setSlipsViewScope, toggleSlipsOrder, filterShiftSlips,
     toggleSlipsExpand, renderShiftModule, reconcileShift, renderShiftHistory,
     openShiftDetailsModal, renderShiftModalSalesTable, filterShiftModalSales,
-    closeShiftDetailsModal, printCurrentModalShift, exportCurrentModalShiftCSV
+    closeShiftDetailsModal, printCurrentModalShift, exportCurrentModalShiftCSV,
+    showShiftClosedModal, closeShiftClosedModal, finishShiftAndGoToPDV
 } from '../modules/shifts.js';
 
 import { configureReports, renderEvoPrintSheet, printCashReport } from '../modules/reports.js';
@@ -581,6 +582,8 @@ window.app = {
     closeShiftDetailsModal,
     printCurrentModalShift,
     exportCurrentModalShiftCSV,
+    closeShiftClosedModal,
+    finishShiftAndGoToPDV,
     printCashReport,
 
     // Produtos & Estoque
