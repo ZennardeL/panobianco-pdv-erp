@@ -764,6 +764,7 @@ class SupabaseAdapter {
 }
 
 const supabaseAdapter = new SupabaseAdapter();
+window.supabaseAdapter = supabaseAdapter;
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { SupabaseAdapter, supabaseAdapter };
 }

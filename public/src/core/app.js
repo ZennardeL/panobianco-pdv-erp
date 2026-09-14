@@ -635,18 +635,12 @@ window.app = {
 
 async function init() {
     // 1. Tentar conectar ao Supabase Cloud (se configurado)
-    console.log('[INIT] supabaseAdapter exists:', typeof window.supabaseAdapter !== 'undefined');
-    console.log('[INIT] SUPABASE_CONFIG exists:', typeof window.SUPABASE_CONFIG !== 'undefined');
-    
     let supabaseOk = false;
     if (typeof window.supabaseAdapter !== 'undefined') {
         try {
             supabaseOk = window.supabaseAdapter.init();
-            console.log('[INIT] supabaseAdapter.init() returned:', supabaseOk);
-            console.log('[INIT] adapter.isConnected:', window.supabaseAdapter.isConnected);
-            console.log('[INIT] adapter.client:', !!window.supabaseAdapter.client);
         } catch (e) {
-            console.error('[INIT] supabaseAdapter.init() threw:', e.message);
+            console.error('⚠️ Erro ao inicializar Supabase:', e.message);
         }
     }
     
@@ -658,7 +652,6 @@ async function init() {
         updateSyncBadge(true, true);
     } else {
         useSupabase = false;
-        console.log('[INIT] Supabase NOT available, using offline mode');
     }
 
     // 2. Tentar recuperar sessão existente
