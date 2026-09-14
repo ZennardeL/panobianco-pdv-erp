@@ -39,3 +39,5 @@ supabase/migrate_*.js
 .claude/
 agent/
 skills-lock.json
+
+*.bak

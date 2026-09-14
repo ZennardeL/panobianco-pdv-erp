@@ -466,7 +466,8 @@ export async function closeShift(countedCash, operatorId, operatorName, tenantId
         .from('sales')
         .select('total, payment_method, status')
         .eq('tenant_id', tid)
-        .eq('status', 'CONCLUIDA');
+        .eq('status', 'CONCLUIDA')
+        .eq('shift_id', openShift ? openShift.id : '__none__');
 
     let systemCash = 0;
     let totalRevenue = 0;
@@ -479,11 +480,12 @@ export async function closeShift(countedCash, operatorId, operatorName, tenantId
 
     const diff = countedCash - systemCash;
     const shiftId = openShift ? openShift.id : ('shift_' + Date.now());
+    const shiftCode = openShift ? openShift.shift_code : 'T01';
 
     await client.from('shifts').upsert({
         id: shiftId,
         tenant_id: tid,
-        shift_code: openShift ? openShift.shift_code : 'T01',
+        shift_code: shiftCode,
         operator_id: operatorId,
         operator_name: operatorName,
         start_time: openShift ? openShift.start_time : new Date().toISOString(),
@@ -516,7 +518,7 @@ export async function closeShift(countedCash, operatorId, operatorName, tenantId
         details: `Fechamento: Gaveta R$ ${countedCash.toFixed(2)} | Sistema R$ ${systemCash.toFixed(2)} | Dif R$ ${diff.toFixed(2)}`
     });
 
-    return { diff, systemCash, totalRevenue };
+    return { diff, systemCash, totalRevenue, shiftCode, totalSales: (shiftSales || []).length };
 }
 
 
