@@ -99,6 +99,9 @@ export function searchProducts(query, onRender) {
 export function getFilteredProducts(products) {
     let filtered = products || [];
 
+    // Oculta produtos esgotados (estoque <= 0) da frente de caixa para evitar poluição visual
+    filtered = filtered.filter(p => (Number(p.stock) || 0) > 0);
+
     if (_activeCategory && _activeCategory !== 'todas') {
         const group = CATEGORY_GROUPS[_activeCategory];
         if (group) {
@@ -135,10 +138,19 @@ export function renderProductsGrid(products, saleCounter, onAddToCart) {
 
     const filtered = getFilteredProducts(products);
 
-    filtered.forEach(prod => {
-        const card = document.createElement('div');
-        card.className = `prod-card ${prod.stock <= 0 ? 'out-of-stock' : ''}`;
-        card.onclick = () => onAddToCart(prod.id);
+    if (filtered.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 48px 16px; color: #94a3b8;">
+                <div style="font-size: 32pt; margin-bottom: 8px;">📦</div>
+                <div style="font-weight: 600; font-size: 11pt; color: #64748b;">Nenhum produto disponível no momento</div>
+                <div style="font-size: 8.5pt; margin-top: 4px; color: #94a3b8;">Itens esgotados são ocultados automaticamente da frente de caixa.</div>
+            </div>
+        `;
+    } else {
+        filtered.forEach(prod => {
+            const card = document.createElement('div');
+            card.className = `prod-card ${prod.stock <= 0 ? 'out-of-stock' : ''}`;
+            card.onclick = () => onAddToCart(prod.id);
 
         let stockClass = 'stock-high';
         let stockLabel = `${prod.stock} em estoque`;
@@ -165,6 +177,7 @@ export function renderProductsGrid(products, saleCounter, onAddToCart) {
         `;
         grid.appendChild(card);
     });
+    }
 
     // Tag da próxima venda
     const nextSeq = (saleCounter || (products || []).length) + 1;

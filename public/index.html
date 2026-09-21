@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=3.3.0">
+    <link rel="stylesheet" href="style.css?v=3.3.1">
     <!-- Sentry Error Monitoring & Performance Tracking -->
     <script src="https://browser.sentry-cdn.com/8.54.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
     <script>
@@ -23,7 +23,7 @@
                 tracesSampleRate: 1.0,
                 tracePropagationTargets: ["localhost", "panobianco-pdv-erp.vercel.app", /^https:\/\/.*\.supabase\.co/],
                 environment: window.location.hostname.includes('vercel.app') ? 'production' : 'development',
-                release: 'panobianco-pdv@3.3.0'
+                release: 'panobianco-pdv@3.3.1'
             });
         }
     </script>
@@ -1032,8 +1032,8 @@
 
     <!-- Supabase JS Client (CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase/config.js?v=3.3.0"></script>
-    <script src="supabase/adapter.js?v=3.3.0"></script>
-    <script type="module" src="src/core/app.js?v=3.3.0"></script>
+    <script src="supabase/config.js?v=3.3.1"></script>
+    <script src="supabase/adapter.js?v=3.3.1"></script>
+    <script type="module" src="src/core/app.js?v=3.3.1"></script>
 </body>
 </html>
