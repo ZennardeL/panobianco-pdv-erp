@@ -343,15 +343,8 @@ export function renderConsumptionModule() {
     const currentUser = _config?.getCurrentUser();
     const isAdmin = currentUser && currentUser.role === ROLES.ADMIN;
 
-    // Se não for admin, oculta a view
+    // Se não for admin, não renderiza (a view permanece com seu HTML intacto e oculta via .admin-only)
     if (!isAdmin) {
-        viewContainer.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px; color: #94a3b8;">
-                <div style="font-size: 36pt; margin-bottom: 12px;">🔒</div>
-                <h3 style="color: #64748b;">Acesso Restrito a Administradores</h3>
-                <p>A aba de Consumo Interno e Vales é visível apenas para gestores.</p>
-            </div>
-        `;
         return;
     }
 
