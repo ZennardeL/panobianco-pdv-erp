@@ -668,6 +668,11 @@ window.app = {
 // ════════════════════════════════════════════
 
 async function init() {
+    // 0. Esconder elementos admin por padrão até autenticação
+    document.querySelectorAll('.admin-only').forEach(el => {
+        el.style.display = 'none';
+    });
+
     // 1. Tentar conectar ao Supabase Cloud (se configurado)
     let supabaseOk = false;
     if (typeof window.supabaseAdapter !== 'undefined') {

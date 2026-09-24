@@ -111,6 +111,11 @@ export function showLoginModal() {
 
     const err = document.getElementById('login-error');
     if (err) err.style.display = 'none';
+
+    // Garante que abas e funções restritas de admin fiquem ocultas até autenticação válida
+    document.querySelectorAll('.admin-only').forEach(el => {
+        el.style.display = 'none';
+    });
 }
 
 /**
