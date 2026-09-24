@@ -502,17 +502,17 @@
                         <!-- Beneficiário: Diretoria -->
                         <div id="cons-wrapper-diretoria" class="form-group" style="margin-bottom: 16px;">
                             <label style="font-weight: 700; font-size: 9pt; color: #475569; display: block; margin-bottom: 6px;">
-                                QUEM RETIROU (SÓCIOS / FAMÍLIA):
+                                QUEM RETIROU (SÓCIOS / PROPRIETÁRIOS):
                             </label>
                             <div style="display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">
                                 <button type="button" class="btn btn-outline diretoria-quick-btn" onclick="app.selectDiretoriaBeneficiary('Lucianna (Proprietária)')">
-                                    Lucianna (Esposa)
+                                    Lucianna (Proprietária)
                                 </button>
                                 <button type="button" class="btn btn-outline diretoria-quick-btn" onclick="app.selectDiretoriaBeneficiary('Juliano Amadio (Proprietário)')">
                                     Juliano (Proprietário)
                                 </button>
                             </div>
-                            <input type="text" id="cons-diretoria-custom-name" class="form-control" placeholder="Ou digite o nome de quem pegou (ex: Esposa do Patrão)" value="Lucianna (Proprietária)">
+                            <input type="text" id="cons-diretoria-custom-name" class="form-control" placeholder="Ou digite o nome de quem retirou (ex: Proprietário)" value="Lucianna (Proprietária)">
                         </div>
 
                         <!-- Beneficiário: Funcionário (Desconto em Folha) -->
@@ -576,7 +576,7 @@
                             <label style="font-weight: 700; font-size: 9pt; color: #475569; display: block; margin-bottom: 6px;">
                                 OBSERVAÇÕES (OPCIONAL):
                             </label>
-                            <input type="text" id="cons-notes" class="form-control" placeholder="Ex: Pegou na quarta à tarde para a esposa...">
+                            <input type="text" id="cons-notes" class="form-control" placeholder="Ex: Pegou para consumo próprio...">
                         </div>
 
                         <button class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 11pt; font-weight: 700;" onclick="app.submitConsumption()">
