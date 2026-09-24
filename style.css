@@ -56,6 +56,11 @@ body {
     flex-direction: column;
 }
 
+/* ==================== RBAC CONTROLE DE ACESSO ==================== */
+.admin-only {
+    display: none;
+}
+
 /* ==================== LOGIN MODAL ==================== */
 .modal-overlay {
     position: fixed;
