@@ -125,6 +125,27 @@ INSERT INTO counters (tenant_id, key, value)
 VALUES ('default', 'sale_counter', 0), ('default', 'shift_counter', 0)
 ON CONFLICT (tenant_id, key) DO NOTHING;
 
+-- 10. TABELA DE CONSUMO INTERNO & VALES (Baixas de Sócios e Descontos em Folha)
+CREATE TABLE IF NOT EXISTS internal_consumptions (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL DEFAULT 'default' REFERENCES tenants(id) ON DELETE CASCADE,
+    type TEXT NOT NULL CHECK (type IN ('DIRETORIA', 'FUNCIONARIO', 'USO_INTERNO', 'AVARIA')),
+    beneficiary_name TEXT NOT NULL,
+    beneficiary_user_id TEXT REFERENCES users(id),
+    product_id TEXT NOT NULL REFERENCES products(id),
+    product_name TEXT NOT NULL,
+    qty INTEGER NOT NULL DEFAULT 1,
+    unit_price NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+    unit_cost NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+    total_value NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+    operator_id TEXT NOT NULL,
+    operator_name TEXT NOT NULL,
+    notes TEXT,
+    consumed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    status TEXT NOT NULL DEFAULT 'ATIVO' CHECK (status IN ('ATIVO', 'ESTORNADO')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- 10. ÍNDICES DE PERFORMANCE
 CREATE INDEX IF NOT EXISTS idx_users_tenant_code ON users(tenant_id, code);
 CREATE INDEX IF NOT EXISTS idx_products_tenant_category ON products(tenant_id, category);
@@ -406,4 +427,9 @@ CREATE POLICY "Allow all on sale_items" ON sale_items FOR ALL USING (true) WITH 
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow all on audit_log" ON audit_log;
 CREATE POLICY "Allow all on audit_log" ON audit_log FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE internal_consumptions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all on internal_consumptions" ON internal_consumptions;
+CREATE POLICY "Allow all on internal_consumptions" ON internal_consumptions FOR ALL USING (true) WITH CHECK (true);
+
 

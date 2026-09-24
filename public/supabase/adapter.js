@@ -65,14 +65,16 @@ class SupabaseAdapter {
             { data: counters, error: countErr },
             { data: shifts, error: shiftErr },
             { data: sales, error: saleErr },
-            { data: saleItems, error: itemErr }
+            { data: saleItems, error: itemErr },
+            { data: consumptions, error: consErr }
         ] = await Promise.all([
             this.client.from('products').select('*').eq('tenant_id', tenantId).order('name'),
             this.client.from('users').select('*').eq('tenant_id', tenantId).order('name'),
             this.client.from('counters').select('*').eq('tenant_id', tenantId),
             this.client.from('shifts').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
             this.client.from('sales').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
-            this.client.from('sale_items').select('*').eq('tenant_id', tenantId)
+            this.client.from('sale_items').select('*').eq('tenant_id', tenantId),
+            this.client.from('internal_consumptions').select('*').eq('tenant_id', tenantId).order('consumed_at', { ascending: false })
         ]);
 
         if (prodErr) throw prodErr;
@@ -168,6 +170,26 @@ class SupabaseAdapter {
                 diff: Number(s.diff),
                 status: s.status,
                 sales: formattedSales.filter(sale => sale.shiftId === s.id)
+            })),
+            consumptions: (consumptions || []).map(c => ({
+                id: c.id,
+                type: c.type,
+                beneficiaryName: c.beneficiary_name,
+                beneficiaryUserId: c.beneficiary_user_id,
+                productId: c.product_id,
+                productName: c.product_name,
+                qty: c.qty,
+                unitPrice: Number(c.unit_price),
+                unitCost: Number(c.unit_cost),
+                totalValue: Number(c.total_value),
+                operatorId: c.operator_id,
+                operatorName: c.operator_name,
+                notes: c.notes || '',
+                consumedAt: c.consumed_at,
+                dateFormatted: new Date(c.consumed_at).toLocaleDateString('pt-BR'),
+                timeFormatted: new Date(c.consumed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                fullDateTime: new Date(c.consumed_at).toLocaleString('pt-BR'),
+                status: c.status
             })),
             saleCounter,
             shiftCounter
@@ -753,6 +775,14 @@ class SupabaseAdapter {
                 (payload) => {
                     console.log('⚡ [Realtime] Usuário alterado:', payload);
                     if (onDataChanged) onDataChanged('user', payload);
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'internal_consumptions', filter: `tenant_id=eq.${tenantId}` },
+                (payload) => {
+                    console.log('⚡ [Realtime] Consumo interno alterado:', payload);
+                    if (onDataChanged) onDataChanged('consumption', payload);
                 }
             )
             .subscribe((status) => {

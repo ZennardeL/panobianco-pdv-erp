@@ -72,6 +72,15 @@ import {
 
 import { configureDashboard, renderDashboard, setDashEl } from '../modules/dashboard.js';
 
+import {
+    configureConsumption, renderConsumptionModule, setConsumptionType,
+    selectDiretoriaBeneficiary, onConsumptionProductChange,
+    submitConsumption, cancelConsumptionRecord, setConsumptionPeriodFilter,
+    setConsumptionTypeFilter, setConsumptionUserFilter, searchConsumptions,
+    exportConsumptionsCSV
+} from '../modules/consumption.js';
+
+
 
 // ════════════════════════════════════════════
 // Estado Global da Aplicação
@@ -263,6 +272,7 @@ function renderAll() {
     renderAuditLogs();
     renderUsersTable();
     renderDashboard();
+    renderConsumptionModule();
     updateStockAlerts();
 }
 
@@ -528,6 +538,7 @@ configureInventory(sharedConfig);
 configureUsers(sharedConfig);
 configureAudit(sharedConfig);
 configureDashboard({ getState: () => state });
+configureConsumption(sharedConfig);
 
 
 // ════════════════════════════════════════════
@@ -538,7 +549,14 @@ window.app = {
     // Auth & Navigation
     handleEmployeeLogin: handleLogin,
     logout: handleLogout,
-    navigate: (viewId) => { navigate(viewId); renderAll(); },
+    navigate: (viewId) => {
+        if (viewId === 'consumo' && (!currentUser || currentUser.role !== ROLES.ADMIN)) {
+            alert('⚠️ Acesso restrito: Apenas administradores podem acessar a aba de Consumo & Vales.');
+            return;
+        }
+        navigate(viewId);
+        renderAll();
+    },
 
     // PDV / Carrinho
     filterCategory: (cat) => filterCategory(cat, renderAll),
@@ -629,7 +647,19 @@ window.app = {
     openSupabaseModal,
     closeSupabaseModal,
     testSupabaseConnection,
-    saveSupabaseConfig
+    saveSupabaseConfig,
+
+    // Consumo Interno & Vales (Admin Only)
+    setConsumptionType,
+    selectDiretoriaBeneficiary,
+    onConsumptionProductChange,
+    submitConsumption,
+    cancelConsumptionRecord,
+    setConsumptionPeriodFilter,
+    setConsumptionTypeFilter,
+    setConsumptionUserFilter,
+    searchConsumptions,
+    exportConsumptionsCSV
 };
 
 

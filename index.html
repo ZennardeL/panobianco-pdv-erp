@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=3.3.1">
+    <link rel="stylesheet" href="style.css?v=3.4.0">
     <!-- Sentry Error Monitoring & Performance Tracking -->
     <script src="https://browser.sentry-cdn.com/8.54.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
     <script>
@@ -23,7 +23,7 @@
                 tracesSampleRate: 1.0,
                 tracePropagationTargets: ["localhost", "panobianco-pdv-erp.vercel.app", /^https:\/\/.*\.supabase\.co/],
                 environment: window.location.hostname.includes('vercel.app') ? 'production' : 'development',
-                release: 'panobianco-pdv@3.3.1'
+                release: 'panobianco-pdv@3.4.0'
             });
         }
     </script>
@@ -90,6 +90,9 @@
                     💵 Fechamento & Vias EVO
                 </button>
                 <!-- Abas Restritas Apenas para Administradores -->
+                <button class="nav-tab admin-only" id="tab-btn-consumo" onclick="app.navigate('consumo')">
+                    🏷️ Consumo & Vales
+                </button>
                 <button class="nav-tab admin-only" id="tab-btn-auditoria" onclick="app.navigate('auditoria')">
                     🛡️ Auditoria & Logs
                 </button>
@@ -414,6 +417,224 @@
                         </div>
                         <div class="history-list" id="shift-history-list">
                             <!-- Inserido dinamicamente -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <!-- ==================== VIEW: CONSUMO INTERNO & VALES (ADMIN ONLY) ==================== -->
+        <main id="view-consumo" class="view-content admin-only">
+            <div class="view-inner">
+                <div class="module-header">
+                    <div>
+                        <h2>🏷️ Consumo Interno & Vales de Colaboradores</h2>
+                        <p>Baixas de estoque para sócios/diretoria e vales para desconto em folha (sem impacto no caixa)</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="app.exportConsumptionsCSV()">
+                            📥 Exportar CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Cards de Resumo Financeiro / Métricas -->
+                <div class="consumption-summary-cards">
+                    <div class="sc-card">
+                        <div class="sc-icon">💰</div>
+                        <div class="sc-info">
+                            <span class="sc-title">Total Geral Baixado</span>
+                            <span class="sc-value" id="cons-metric-total-geral">R$ 0,00</span>
+                        </div>
+                    </div>
+                    <div class="sc-card">
+                        <div class="sc-icon">👑</div>
+                        <div class="sc-info">
+                            <span class="sc-title">Sócios / Patrão</span>
+                            <span class="sc-value" style="color: #7e22ce;" id="cons-metric-total-diretoria">R$ 0,00</span>
+                        </div>
+                    </div>
+                    <div class="sc-card">
+                        <div class="sc-icon">👤</div>
+                        <div class="sc-info">
+                            <span class="sc-title">Vales a Descontar</span>
+                            <span class="sc-value" style="color: #ea580c;" id="cons-metric-total-vales">R$ 0,00</span>
+                        </div>
+                    </div>
+                    <div class="sc-card">
+                        <div class="sc-icon">📦</div>
+                        <div class="sc-info">
+                            <span class="sc-title">Itens Retirados</span>
+                            <span class="sc-value" id="cons-metric-total-itens">0 un</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Layout em 2 Colunas: Formulário à Esquerda, Histórico à Direita -->
+                <div class="consumption-grid-layout">
+                    <!-- Coluna 1: Formulário de Lançamento -->
+                    <div class="consumption-form-card">
+                        <h3 style="margin-bottom: 16px; font-size: 13pt; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+                            <span>➕</span> Lançar Nova Retirada / Baixa
+                        </h3>
+
+                        <!-- Seletor de Tipo de Consumo -->
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label style="font-weight: 700; font-size: 9pt; color: #475569; display: block; margin-bottom: 8px;">
+                                TIPO DE RETIRADA / DESTINO:
+                            </label>
+                            <div class="consumption-type-selector">
+                                <label class="type-pill-label">
+                                    <input type="radio" name="cons-type" id="cons-type-diretoria" value="DIRETORIA" checked onchange="app.setConsumptionType('DIRETORIA')">
+                                    <span class="type-pill">👑 Sócios / Patrão</span>
+                                </label>
+                                <label class="type-pill-label">
+                                    <input type="radio" name="cons-type" id="cons-type-funcionario" value="FUNCIONARIO" onchange="app.setConsumptionType('FUNCIONARIO')">
+                                    <span class="type-pill">👤 Vale Colaborador</span>
+                                </label>
+                                <label class="type-pill-label">
+                                    <input type="radio" name="cons-type" id="cons-type-interno" value="USO_INTERNO" onchange="app.setConsumptionType('USO_INTERNO')">
+                                    <span class="type-pill">🏢 Uso Interno</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Beneficiário: Diretoria -->
+                        <div id="cons-wrapper-diretoria" class="form-group" style="margin-bottom: 16px;">
+                            <label style="font-weight: 700; font-size: 9pt; color: #475569; display: block; margin-bottom: 6px;">
+                                QUEM RETIROU (SÓCIOS / FAMÍLIA):
+                            </label>
+                            <div style="display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">
+                                <button type="button" class="btn btn-outline diretoria-quick-btn" onclick="app.selectDiretoriaBeneficiary('Lucianna (Proprietária)')">
+                                    Lucianna (Esposa)
+                                </button>
+                                <button type="button" class="btn btn-outline diretoria-quick-btn" onclick="app.selectDiretoriaBeneficiary('Juliano Amadio (Proprietário)')">
+                                    Juliano (Proprietário)
+                                </button>
+                            </div>
+                            <input type="text" id="cons-diretoria-custom-name" class="form-control" placeholder="Ou digite o nome de quem pegou (ex: Esposa do Patrão)" value="Lucianna (Proprietária)">
+                        </div>
+
+                        <!-- Beneficiário: Funcionário (Desconto em Folha) -->
+                        <div id="cons-wrapper-funcionario" class="form-group" style="display: none; margin-bottom: 16px;">
+                            <label style="font-weight: 700; font-size: 9pt; color: #475569; display: block; margin-bottom: 6px;">
+                                COLABORADOR (PARA DESCONTO EM FOLHA):
+                            </label>
+                            <select id="cons-employee-select" class="form-control">
+                                <option value="">-- Selecione o Colaborador --</option>
+                            </select>
+                        </div>
+
+                        <!-- Beneficiário: Uso Interno / Academia -->
+                        <div id="cons-wrapper-custom" class="form-group" style="display: none; margin-bottom: 16px;">
+                            <label style="font-weight: 700; font-size: 9pt; color: #475569; display: block; margin-bottom: 6px;">
+                                DESTINO / USO INTERNO:
+                            </label>
+                            <input type="text" id="cons-custom-dest-name" class="form-control" placeholder="Ex: Recepção, Limpeza, Evento...">
+                        </div>
+
+                        <!-- Seleção do Produto -->
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label style="font-weight: 700; font-size: 9pt; color: #475569; display: block; margin-bottom: 6px;">
+                                PRODUTO RETIRADO:
+                            </label>
+                            <select id="cons-product-select" class="form-control" onchange="app.onConsumptionProductChange()">
+                                <option value="">-- Selecione o Produto --</option>
+                            </select>
+                            <div id="cons-stock-available-info" style="font-size: 8pt; margin-top: 4px; color: #64748b;"></div>
+                        </div>
+
+                        <!-- Qtd, Preço e Data -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                            <div class="form-group">
+                                <label style="font-weight: 700; font-size: 9pt; color: #475569; display: block; margin-bottom: 6px;">
+                                    QUANTIDADE:
+                                </label>
+                                <input type="number" id="cons-qty" class="form-control" min="1" value="1">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-weight: 700; font-size: 9pt; color: #475569; display: block; margin-bottom: 6px;">
+                                    VALOR UNIT. (R$):
+                                </label>
+                                <input type="number" id="cons-unit-price" class="form-control" step="0.01" placeholder="0,00">
+                            </div>
+                        </div>
+
+                        <!-- Data / Hora (Permite Retroativa) -->
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label style="font-weight: 700; font-size: 9pt; color: #475569; display: block; margin-bottom: 6px;">
+                                DATA DA RETIRADA (PERMITE RETROATIVO):
+                            </label>
+                            <input type="datetime-local" id="cons-date" class="form-control">
+                            <span style="font-size: 7.5pt; color: #94a3b8; display: block; margin-top: 2px;">
+                                Permite registrar retroativamente se o produto foi pego dias atrás.
+                            </span>
+                        </div>
+
+                        <!-- Observações -->
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label style="font-weight: 700; font-size: 9pt; color: #475569; display: block; margin-bottom: 6px;">
+                                OBSERVAÇÕES (OPCIONAL):
+                            </label>
+                            <input type="text" id="cons-notes" class="form-control" placeholder="Ex: Pegou na quarta à tarde para a esposa...">
+                        </div>
+
+                        <button class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 11pt; font-weight: 700;" onclick="app.submitConsumption()">
+                            📦 Confirmar Baixa no Estoque
+                        </button>
+                    </div>
+
+                    <!-- Coluna 2: Histórico e Conferência -->
+                    <div class="consumption-history-card">
+                        <div class="ch-header">
+                            <div>
+                                <h3 style="font-size: 13pt; color: #1e293b; margin-bottom: 4px;">
+                                    📜 Histórico de Baixas & Vales
+                                </h3>
+                                <p style="font-size: 8.5pt; color: #64748b;">
+                                    Conferência para acerto salarial e auditoria de retiradas
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Barra de Filtros -->
+                        <div class="ch-filters">
+                            <div class="filter-pills-row">
+                                <span style="font-size: 8pt; font-weight: 700; color: #64748b;">PERÍODO:</span>
+                                <button class="filter-pill cons-period-pill active" data-period="all" onclick="app.setConsumptionPeriodFilter('all')">Todos</button>
+                                <button class="filter-pill cons-period-pill" data-period="month" onclick="app.setConsumptionPeriodFilter('month')">Mês Atual</button>
+                                <button class="filter-pill cons-period-pill" data-period="today" onclick="app.setConsumptionPeriodFilter('today')">Hoje</button>
+                            </div>
+                            <div class="filter-pills-row" style="margin-top: 6px;">
+                                <span style="font-size: 8pt; font-weight: 700; color: #64748b;">TIPO:</span>
+                                <button class="filter-pill cons-type-filter-pill active" data-type="all" onclick="app.setConsumptionTypeFilter('all')">Todos</button>
+                                <button class="filter-pill cons-type-filter-pill" data-type="DIRETORIA" onclick="app.setConsumptionTypeFilter('DIRETORIA')">👑 Sócios</button>
+                                <button class="filter-pill cons-type-filter-pill" data-type="FUNCIONARIO" onclick="app.setConsumptionTypeFilter('FUNCIONARIO')">👤 Vales</button>
+                            </div>
+                            <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+                                <select id="cons-filter-employee" class="form-control" style="flex: 1; min-width: 180px; font-size: 8.5pt;" onchange="app.setConsumptionUserFilter(this.value)">
+                                    <option value="all">Todos os Colaboradores</option>
+                                </select>
+                                <input type="text" class="form-control" style="flex: 1.5; min-width: 180px; font-size: 8.5pt;" placeholder="🔍 Buscar por nome, produto..." oninput="app.searchConsumptions(this.value)">
+                            </div>
+                        </div>
+
+                        <!-- Tabela de Registros -->
+                        <div class="table-responsive" style="max-height: 480px; overflow-y: auto; margin-top: 12px;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Data/Hora</th>
+                                        <th>Tipo</th>
+                                        <th>Beneficiário</th>
+                                        <th>Produto & Qtd</th>
+                                        <th>Valor Total</th>
+                                        <th>Operador</th>
+                                        <th class="text-right">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="consumption-table-body">
+                                    <!-- Inserido dinamicamente via JS -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -1032,8 +1253,8 @@
 
     <!-- Supabase JS Client (CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase/config.js?v=3.3.1"></script>
-    <script src="supabase/adapter.js?v=3.3.1"></script>
-    <script type="module" src="src/core/app.js?v=3.3.1"></script>
+    <script src="supabase/config.js?v=3.4.0"></script>
+    <script src="supabase/adapter.js?v=3.4.0"></script>
+    <script type="module" src="src/core/app.js?v=3.4.0"></script>
 </body>
 </html>

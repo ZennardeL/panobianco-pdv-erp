@@ -17,7 +17,7 @@ import { debounce } from '../core/helpers.js';
 let _channel = null;
 
 /** Tabelas monitoradas via Realtime */
-const MONITORED_TABLES = ['products', 'sales', 'shifts', 'users'];
+const MONITORED_TABLES = ['products', 'sales', 'shifts', 'users', 'internal_consumptions'];
 
 /**
  * Inicia a escuta Realtime para sincronização instantânea.

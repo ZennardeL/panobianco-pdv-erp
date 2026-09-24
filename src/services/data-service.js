@@ -660,3 +660,191 @@ export async function getAuditLogs(filters = {}, tenantId) {
 
     return { logs: logs || [], actionTypes };
 }
+
+
+// ────────────────────────────────────────────
+// Consumo Interno & Vales (Diretoria e Funcionários)
+// ────────────────────────────────────────────
+
+/**
+ * Registra uma baixa de produto por consumo interno (Diretoria/Patrão ou Vale Funcionário).
+ * Baixa o estoque atomicamente e salva o registro sem passar por vendas/caixa.
+ * 
+ * @param {object} payload
+ * @param {string} payload.type - 'DIRETORIA' | 'FUNCIONARIO' | 'USO_INTERNO' | 'AVARIA'
+ * @param {string} payload.beneficiaryName - Nome de quem retirou (ex: "Lucianna", "Nicolas Monção")
+ * @param {string} [payload.beneficiaryUserId] - ID do usuário se for colaborador cadastrado
+ * @param {string} payload.productId - ID do produto
+ * @param {number} payload.qty - Quantidade retirada
+ * @param {number} [payload.unitPrice] - Preço unitário (venda)
+ * @param {number} [payload.unitCost] - Preço de custo
+ * @param {string} [payload.notes] - Observações
+ * @param {string} [payload.consumedAt] - Data do consumo (permite data retroativa)
+ * @param {string} payload.operatorId - ID do operador que lançou
+ * @param {string} payload.operatorName - Nome do operador que lançou
+ * @param {string} [payload.tenantId] - ID do tenant
+ * @returns {Promise<{success: boolean, id: string, newStock: number}>}
+ */
+export async function createInternalConsumption(payload) {
+    const client = getClient();
+    const tid = payload.tenantId || getTenantId();
+
+    // 1. Obter produto e deduzir estoque
+    const { data: prod, error: prodErr } = await client
+        .from('products')
+        .select('stock, name, price, cost')
+        .eq('id', payload.productId)
+        .eq('tenant_id', tid)
+        .single();
+
+    if (prodErr || !prod) {
+        throw new Error(prodErr ? prodErr.message : 'Produto não encontrado.');
+    }
+
+    const qty = parseInt(payload.qty) || 1;
+    if (qty <= 0) throw new Error('Quantidade inválida para baixa.');
+    if (prod.stock < qty) {
+        throw new Error(`Estoque insuficiente. Disponível: ${prod.stock} un.`);
+    }
+
+    const newStock = Math.max(0, prod.stock - qty);
+    const { error: updErr } = await client
+        .from('products')
+        .update({ stock: newStock, updated_at: new Date().toISOString() })
+        .eq('id', payload.productId)
+        .eq('tenant_id', tid);
+
+    if (updErr) throw updErr;
+
+    // 2. Gravar registro em internal_consumptions
+    const id = 'CI_' + Date.now();
+    const unitPrice = payload.unitPrice !== undefined ? Number(payload.unitPrice) : Number(prod.price || 0);
+    const unitCost = payload.unitCost !== undefined ? Number(payload.unitCost) : Number(prod.cost || 0);
+    const totalValue = unitPrice * qty;
+
+    const { error: insertErr } = await client
+        .from('internal_consumptions')
+        .insert({
+            id,
+            tenant_id: tid,
+            type: payload.type,
+            beneficiary_name: payload.beneficiaryName,
+            beneficiary_user_id: payload.beneficiaryUserId || null,
+            product_id: payload.productId,
+            product_name: prod.name,
+            qty,
+            unit_price: unitPrice,
+            unit_cost: unitCost,
+            total_value: totalValue,
+            operator_id: payload.operatorId,
+            operator_name: payload.operatorName,
+            notes: payload.notes || '',
+            consumed_at: payload.consumedAt || new Date().toISOString(),
+            status: 'ATIVO'
+        });
+
+    if (insertErr) throw insertErr;
+
+    // 3. Auditoria
+    await insertAuditLog(tid, {
+        action: 'CONSUMO_INTERNO',
+        entityType: 'internal_consumption',
+        entityId: id,
+        operatorId: payload.operatorId,
+        operatorName: payload.operatorName,
+        details: `Baixa no estoque: ${qty}x ${prod.name} (R$ ${totalValue.toFixed(2).replace('.', ',')}) para ${payload.beneficiaryName} [${payload.type}]`
+    });
+
+    return { success: true, id, newStock };
+}
+
+/**
+ * Estorna uma baixa de consumo interno, devolvendo o estoque ao produto.
+ * 
+ * @param {string} consumptionId - ID do consumo (ex: CI_123456)
+ * @param {string} reason - Motivo do estorno
+ * @param {string} operatorId - ID do operador
+ * @param {string} operatorName - Nome do operador
+ * @param {string} [tenantId] - ID do tenant
+ * @returns {Promise<{success: boolean}>}
+ */
+export async function cancelInternalConsumption(consumptionId, reason, operatorId, operatorName, tenantId) {
+    const client = getClient();
+    const tid = tenantId || getTenantId();
+
+    const { data: cons, error: fetchErr } = await client
+        .from('internal_consumptions')
+        .select('*')
+        .eq('id', consumptionId)
+        .eq('tenant_id', tid)
+        .single();
+
+    if (fetchErr || !cons) throw new Error('Registro de consumo não encontrado.');
+    if (cons.status === 'ESTORNADO') throw new Error('Este lançamento já foi estornado anteriormente.');
+
+    // 1. Devolver estoque
+    const { data: prod } = await client
+        .from('products')
+        .select('stock, name')
+        .eq('id', cons.product_id)
+        .eq('tenant_id', tid)
+        .single();
+
+    if (prod) {
+        await client
+            .from('products')
+            .update({ stock: prod.stock + cons.qty, updated_at: new Date().toISOString() })
+            .eq('id', cons.product_id)
+            .eq('tenant_id', tid);
+    }
+
+    // 2. Marcar como estornado
+    const { error: updErr } = await client
+        .from('internal_consumptions')
+        .update({ status: 'ESTORNADO' })
+        .eq('id', consumptionId)
+        .eq('tenant_id', tid);
+
+    if (updErr) throw updErr;
+
+    // 3. Auditoria
+    await insertAuditLog(tid, {
+        action: 'ESTORNO_CONSUMO',
+        entityType: 'internal_consumption',
+        entityId: consumptionId,
+        operatorId,
+        operatorName,
+        details: `Estorno de baixa: ${cons.qty}x ${cons.product_name} (${cons.beneficiary_name}). Motivo: ${reason}`
+    });
+
+    return { success: true };
+}
+
+/**
+ * Retorna a lista de consumos internos com filtros opcionais.
+ * 
+ * @param {object} [filters]
+ * @param {string} [tenantId]
+ * @returns {Promise<Array>}
+ */
+export async function getInternalConsumptions(filters = {}, tenantId) {
+    const client = getClient();
+    const tid = tenantId || getTenantId();
+
+    let query = client
+        .from('internal_consumptions')
+        .select('*')
+        .eq('tenant_id', tid)
+        .order('consumed_at', { ascending: false });
+
+    if (filters.status) query = query.eq('status', filters.status);
+    if (filters.type) query = query.eq('type', filters.type);
+    if (filters.beneficiaryUserId) query = query.eq('beneficiary_user_id', filters.beneficiaryUserId);
+
+    const { data, error } = await query;
+    if (error) {
+        console.warn('Erro ao buscar consumos internos:', error.message);
+        return [];
+    }
+    return data || [];
+}

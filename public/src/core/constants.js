@@ -143,4 +143,4 @@ export const CASH_DIFF_TOLERANCE = 0.05;
 export const PHOTO_MAX_SIZE = 300;
 
 /** Versão do sistema (usada para cache busting) */
-export const APP_VERSION = '3.3.1';
+export const APP_VERSION = '3.4.0';
