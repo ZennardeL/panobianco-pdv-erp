@@ -315,8 +315,16 @@ export function applyLoginUI(user) {
 
     // RBAC visual: mostrar/esconder elementos admin-only
     const userIsAdmin = user.role === ROLES.ADMIN;
-    document.querySelectorAll('.admin-only').forEach(el => {
-        el.style.display = userIsAdmin ? '' : 'none';
+    document.querySelectorAll('.admin-only, .admin-only-visible').forEach(el => {
+        if (userIsAdmin) {
+            el.classList.remove('admin-only');
+            el.classList.add('admin-only-visible');
+            el.style.display = '';
+        } else {
+            el.classList.add('admin-only');
+            el.classList.remove('admin-only-visible');
+            el.style.display = 'none';
+        }
     });
 
     // Descrição contextual do estoque

@@ -338,8 +338,16 @@ function onLoginSuccess(user) {
     if (tag) tag.innerText = `Operador: ${user.name} [${user.code.toUpperCase()}]`;
 
     const userIsAdmin = user.role === ROLES.ADMIN;
-    document.querySelectorAll('.admin-only').forEach(el => {
-        el.style.display = userIsAdmin ? '' : 'none';
+    document.querySelectorAll('.admin-only, .admin-only-visible').forEach(el => {
+        if (userIsAdmin) {
+            el.classList.remove('admin-only');
+            el.classList.add('admin-only-visible');
+            el.style.display = '';
+        } else {
+            el.classList.add('admin-only');
+            el.classList.remove('admin-only-visible');
+            el.style.display = 'none';
+        }
     });
 
     const stockDesc = document.getElementById('stock-view-desc');
