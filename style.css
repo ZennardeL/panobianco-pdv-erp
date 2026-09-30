@@ -57,9 +57,7 @@ body {
 }
 
 /* ==================== RBAC CONTROLE DE ACESSO ==================== */
-.admin-only {
-    display: none;
-}
+/* (Removido display:none global para admin-only, pois o JS gerencia isso) */
 
 /* ==================== LOGIN MODAL ==================== */
 .modal-overlay {
