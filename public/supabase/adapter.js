@@ -189,7 +189,13 @@ class SupabaseAdapter {
                 dateFormatted: new Date(c.consumed_at).toLocaleDateString('pt-BR'),
                 timeFormatted: new Date(c.consumed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
                 fullDateTime: new Date(c.consumed_at).toLocaleString('pt-BR'),
-                status: c.status
+                status: c.status,
+                paymentStatus: c.payment_status || (c.type === 'FUNCIONARIO' ? 'PENDENTE' : 'ISENTO'),
+                paymentMethod: c.payment_method || null,
+                paidAt: c.paid_at || null,
+                paidOperatorId: c.paid_operator_id || null,
+                paidOperatorName: c.paid_operator_name || null,
+                paymentNotes: c.payment_notes || null
             })),
             saleCounter,
             shiftCounter

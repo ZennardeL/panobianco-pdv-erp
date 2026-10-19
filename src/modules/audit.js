@@ -294,7 +294,11 @@ export function formatActionLabel(action) {
         'PRODUTO_ATUALIZADO': '✏️ Produto Editado',
         'FOTO_ATUALIZADA': '📷 Foto Atualizada',
         'USUARIO_ATUALIZADO': '👤 Usuário Editado',
-        'FECHAMENTO_TURNO': '🔒 Fechamento de Turno'
+        'FECHAMENTO_TURNO': '🔒 Fechamento de Turno',
+        'CONSUMO_INTERNO': '📦 Baixa Consumo/Vale',
+        'ESTORNO_CONSUMO': '↩️ Estorno de Baixa',
+        'PAGAMENTO_VALE': '💰 Recebimento de Vale',
+        'ESTORNO_PAGAMENTO_VALE': '↩️ Estorno Pgto Vale'
     };
     return labels[action] || action;
 }
@@ -305,7 +309,11 @@ export function getActionBadge(action) {
         'VENDA': '#3b82f6', 'CANCELAMENTO': '#ef4444',
         'REPOSICAO': '#f59e0b', 'PRODUTO_ATUALIZADO': '#8b5cf6',
         'FOTO_ATUALIZADA': '#06b6d4', 'USUARIO_ATUALIZADO': '#ec4899',
-        'FECHAMENTO_TURNO': '#f97316'
+        'FECHAMENTO_TURNO': '#f97316',
+        'CONSUMO_INTERNO': '#ea580c',
+        'ESTORNO_CONSUMO': '#ef4444',
+        'PAGAMENTO_VALE': '#10b981',
+        'ESTORNO_PAGAMENTO_VALE': '#d97706'
     };
     const color = colors[action] || '#6b7280';
     const label = formatActionLabel(action);

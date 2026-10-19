@@ -76,8 +76,9 @@ import {
     configureConsumption, renderConsumptionModule, setConsumptionType,
     selectDiretoriaBeneficiary, onConsumptionProductChange,
     submitConsumption, cancelConsumptionRecord, setConsumptionPeriodFilter,
-    setConsumptionTypeFilter, setConsumptionUserFilter, searchConsumptions,
-    exportConsumptionsCSV
+    setConsumptionTypeFilter, setConsumptionPaymentFilter, setConsumptionUserFilter, searchConsumptions,
+    exportConsumptionsCSV, openConsumptionPaymentModal, openBatchPaymentModal,
+    closeConsumptionPaymentModal, confirmConsumptionPayment, undoConsumptionPayment
 } from '../modules/consumption.js';
 
 
@@ -665,9 +666,15 @@ window.app = {
     cancelConsumptionRecord,
     setConsumptionPeriodFilter,
     setConsumptionTypeFilter,
+    setConsumptionPaymentFilter,
     setConsumptionUserFilter,
     searchConsumptions,
-    exportConsumptionsCSV
+    exportConsumptionsCSV,
+    openConsumptionPaymentModal,
+    openBatchPaymentModal,
+    closeConsumptionPaymentModal,
+    confirmConsumptionPayment,
+    undoConsumptionPayment
 };
 
 

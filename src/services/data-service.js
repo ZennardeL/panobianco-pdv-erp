@@ -740,7 +740,13 @@ export async function createInternalConsumption(payload) {
             operator_name: payload.operatorName,
             notes: payload.notes || '',
             consumed_at: payload.consumedAt || new Date().toISOString(),
-            status: 'ATIVO'
+            status: 'ATIVO',
+            payment_status: payload.type === 'FUNCIONARIO' ? 'PENDENTE' : 'ISENTO',
+            payment_method: null,
+            paid_at: null,
+            paid_operator_id: null,
+            paid_operator_name: null,
+            payment_notes: null
         });
 
     if (insertErr) throw insertErr;
@@ -821,6 +827,115 @@ export async function cancelInternalConsumption(consumptionId, reason, operatorI
 }
 
 /**
+ * Confirma o recebimento/pagamento de um ou mais vales de colaboradores.
+ * 
+ * @param {object} params
+ * @param {string|string[]} params.consumptionIds - ID ou lista de IDs dos consumos
+ * @param {string} params.paymentMethod - 'DINHEIRO' | 'PIX' | 'CARTAO_DEBITO' | 'CARTAO_CREDITO' | 'FOLHA'
+ * @param {string} [params.paidAt] - ISO timestamp da data do recebimento
+ * @param {string} params.operatorId - ID do operador que recebeu
+ * @param {string} params.operatorName - Nome do operador que recebeu
+ * @param {string} [params.paymentNotes] - Observações do pagamento (comprovante, etc)
+ * @param {string} [params.tenantId] - ID do tenant
+ * @returns {Promise<{success: boolean, count: number}>}
+ */
+export async function settleConsumptionPayment({
+    consumptionIds,
+    paymentMethod,
+    paidAt = new Date().toISOString(),
+    operatorId,
+    operatorName,
+    paymentNotes = '',
+    tenantId
+}) {
+    const client = getClient();
+    const tid = tenantId || getTenantId();
+    const ids = Array.isArray(consumptionIds) ? consumptionIds : [consumptionIds];
+
+    if (!ids.length) throw new Error('Nenhum vale informado para recebimento.');
+    if (!paymentMethod) throw new Error('Forma de pagamento não informada.');
+
+    // 1. Atualizar registros em internal_consumptions
+    const { error: updErr } = await client
+        .from('internal_consumptions')
+        .update({
+            payment_status: 'PAGO',
+            payment_method: paymentMethod,
+            paid_at: paidAt,
+            paid_operator_id: operatorId,
+            paid_operator_name: operatorName,
+            payment_notes: paymentNotes || null
+        })
+        .in('id', ids)
+        .eq('tenant_id', tid);
+
+    if (updErr) throw updErr;
+
+    // 2. Auditoria
+    await insertAuditLog(tid, {
+        action: 'PAGAMENTO_VALE',
+        entityType: 'internal_consumption',
+        entityId: ids.join(','),
+        operatorId,
+        operatorName,
+        details: `Recebimento de ${ids.length} vale(s). Meio: ${paymentMethod}. Obs: ${paymentNotes || '-'}`
+    });
+
+    return { success: true, count: ids.length };
+}
+
+/**
+ * Desfaz a confirmação de recebimento/pagamento de um vale, voltando o status para PENDENTE.
+ * 
+ * @param {string} consumptionId - ID do consumo
+ * @param {string} reason - Motivo do estorno
+ * @param {string} operatorId - ID do operador
+ * @param {string} operatorName - Nome do operador
+ * @param {string} [tenantId] - ID do tenant
+ * @returns {Promise<{success: boolean}>}
+ */
+export async function undoConsumptionPayment(consumptionId, reason, operatorId, operatorName, tenantId) {
+    const client = getClient();
+    const tid = tenantId || getTenantId();
+
+    const { data: cons, error: fetchErr } = await client
+        .from('internal_consumptions')
+        .select('*')
+        .eq('id', consumptionId)
+        .eq('tenant_id', tid)
+        .single();
+
+    if (fetchErr || !cons) throw new Error('Registro de consumo não encontrado.');
+    if (cons.payment_status !== 'PAGO') throw new Error('Este vale não está com status PAGO.');
+
+    const { error: updErr } = await client
+        .from('internal_consumptions')
+        .update({
+            payment_status: 'PENDENTE',
+            payment_method: null,
+            paid_at: null,
+            paid_operator_id: null,
+            paid_operator_name: null,
+            payment_notes: null
+        })
+        .eq('id', consumptionId)
+        .eq('tenant_id', tid);
+
+    if (updErr) throw updErr;
+
+    await insertAuditLog(tid, {
+        action: 'ESTORNO_PAGAMENTO_VALE',
+        entityType: 'internal_consumption',
+        entityId: consumptionId,
+        operatorId,
+        operatorName,
+        details: `Cancelamento de recebimento do vale: ${cons.product_name} (${cons.beneficiary_name}). Motivo: ${reason}`
+    });
+
+    return { success: true };
+}
+
+/**
  * Retorna a lista de consumos internos com filtros opcionais.
  * 
  * @param {object} [filters]
@@ -839,6 +954,7 @@ export async function getInternalConsumptions(filters = {}, tenantId) {
 
     if (filters.status) query = query.eq('status', filters.status);
     if (filters.type) query = query.eq('type', filters.type);
+    if (filters.paymentStatus) query = query.eq('payment_status', filters.paymentStatus);
     if (filters.beneficiaryUserId) query = query.eq('beneficiary_user_id', filters.beneficiaryUserId);
 
     const { data, error } = await query;

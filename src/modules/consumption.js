@@ -3,7 +3,7 @@
  * 
  * Gerencia retiradas e baixas de estoque que não passam pelo caixa de vendas:
  * - Retiradas de Sócios / Diretoria / Patrão (uso pessoal/cortesia)
- * - Vales de Colaboradores (para desconto em folha / pagar no salário)
+ * - Vales de Colaboradores (para desconto em folha / pagar no salário / acerto avulso)
  * - Uso Interno da Academia / Avarias
  * 
  * Regra: Acesso estrito a ADMINISTRADORES.
@@ -19,8 +19,22 @@ import { ROLES } from '../core/constants.js';
 let _config = null;
 let _periodFilter = 'all';      // 'all' | 'month' | 'today'
 let _typeFilter = 'all';        // 'all' | 'DIRETORIA' | 'FUNCIONARIO' | 'USO_INTERNO'
-let _userFilter = 'all';        // 'all' | userId
+let _paymentFilter = 'all';     // 'all' | 'PENDENTE' | 'PAGO'
+let _userFilter = 'all';        // 'all' | userId / name
 let _searchQuery = '';
+let _pendingPaymentModalData = null; // { ids: [], beneficiaryName: '', totalValue: 0, itemsSummary: '' }
+
+// ── Helpers de Formatação ────────────────────
+export function formatPaymentMethodLabel(method) {
+    const map = {
+        'DINHEIRO': '💵 Dinheiro',
+        'PIX': '⚡ Pix',
+        'CARTAO_DEBITO': '💳 Débito',
+        'CARTAO_CREDITO': '💳 Crédito',
+        'FOLHA': '📑 Folha / Salário'
+    };
+    return map[method] || method || '—';
+}
 
 // ── Configuração ─────────────────────────────
 export function configureConsumption(config) {
@@ -31,7 +45,7 @@ export function configureConsumption(config) {
 function checkAdminAccess() {
     const user = _config?.getCurrentUser();
     if (!user || user.role !== ROLES.ADMIN) {
-        alert('⚠️ Acesso restrito: Apenas administradores têm permissão para registrar ou gerenciar baixas de consumo.');
+        alert('⚠️ Acesso restrito: Apenas administradores têm permissão para registrar ou gerenciar baixas e quitações de consumo.');
         return false;
     }
     return true;
@@ -166,11 +180,11 @@ export async function submitConsumption() {
     const opName = currentUser ? `${currentUser.name} [${currentUser.code.toUpperCase()}]` : 'Luan [F20729]';
 
     const confirmMsg = `📋 CONFIRMAR BAIXA DE CONSUMO INTERNO?\n\n` +
-        `• Destinatário: ${beneficiaryName} (${type === 'DIRETORIA' ? 'Sócios / Patrão' : (type === 'FUNCIONARIO' ? 'Desconto em Folha' : 'Uso Interno')})\n` +
+        `• Destinatário: ${beneficiaryName} (${type === 'DIRETORIA' ? 'Sócios / Patrão' : (type === 'FUNCIONARIO' ? 'Vale Colaborador' : 'Uso Interno')})\n` +
         `• Quantidade: ${qty} unidade(s)\n` +
         `• Valor Unitário: R$ ${unitPrice.toFixed(2).replace('.', ',')}\n` +
         `• Total: R$ ${(unitPrice * qty).toFixed(2).replace('.', ',')}\n\n` +
-        `ℹ️ O estoque do produto será baixado imediatamente. Esta baixa NÃO entra no caixa nem no faturamento de vendas.`;
+        `ℹ️ O estoque do produto será baixado imediatamente. Esta baixa NÃO entra no caixa nem no faturamento de vendas.${type === 'FUNCIONARIO' ? '\nO status ficará como PENDENTE de pagamento até acerto posterior.' : ''}`;
 
     if (!confirm(confirmMsg)) return;
 
@@ -227,6 +241,161 @@ export async function cancelConsumptionRecord(consumptionId) {
     }
 }
 
+// ── Modal & Quitação de Pagamento de Vales ───
+
+export function openConsumptionPaymentModal(id) {
+    if (!checkAdminAccess()) return;
+    const state = _config?.getState() || {};
+    const item = (state.consumptions || []).find(c => c.id === id);
+    if (!item) {
+        alert('Vale não encontrado.');
+        return;
+    }
+
+    _pendingPaymentModalData = {
+        ids: [item.id],
+        beneficiaryName: item.beneficiaryName,
+        totalValue: item.totalValue,
+        itemsSummary: `1 item: ${item.qty}x ${item.productName} (${formatCurrency(item.totalValue)})`
+    };
+
+    populateAndShowPaymentModal();
+}
+
+export function openBatchPaymentModal(beneficiaryName) {
+    if (!checkAdminAccess()) return;
+    const state = _config?.getState() || {};
+    const pendingItems = (state.consumptions || []).filter(c => 
+        c.status === 'ATIVO' && 
+        c.type === 'FUNCIONARIO' && 
+        c.paymentStatus === 'PENDENTE' && 
+        c.beneficiaryName.toLowerCase() === beneficiaryName.toLowerCase()
+    );
+
+    if (!pendingItems.length) {
+        alert(`Não há vales pendentes para ${beneficiaryName}.`);
+        return;
+    }
+
+    const totalValue = pendingItems.reduce((acc, c) => acc + c.totalValue, 0);
+    const itemsSummary = `${pendingItems.length} itens: ` + 
+        pendingItems.map(c => `${c.qty}x ${c.productName} (${formatCurrency(c.totalValue)})`).join(', ');
+
+    _pendingPaymentModalData = {
+        ids: pendingItems.map(c => c.id),
+        beneficiaryName: pendingItems[0].beneficiaryName,
+        totalValue,
+        itemsSummary
+    };
+
+    populateAndShowPaymentModal();
+}
+
+function populateAndShowPaymentModal() {
+    if (!_pendingPaymentModalData) return;
+
+    const modal = document.getElementById('modal-consumption-payment');
+    if (!modal) return;
+
+    const elBeneficiary = document.getElementById('modal-pay-beneficiary');
+    const elItemsSummary = document.getElementById('modal-pay-items-summary');
+    const elTotalValue = document.getElementById('modal-pay-total-value');
+    const dateInput = document.getElementById('modal-pay-date');
+    const notesInput = document.getElementById('modal-pay-notes');
+    const methodSelect = document.getElementById('modal-pay-method');
+
+    if (elBeneficiary) elBeneficiary.textContent = _pendingPaymentModalData.beneficiaryName;
+    if (elItemsSummary) elItemsSummary.textContent = _pendingPaymentModalData.itemsSummary;
+    if (elTotalValue) elTotalValue.textContent = formatCurrency(_pendingPaymentModalData.totalValue);
+
+    if (dateInput) {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        dateInput.value = now.toISOString().slice(0, 16);
+    }
+    if (notesInput) notesInput.value = '';
+    if (methodSelect) methodSelect.value = 'DINHEIRO';
+
+    modal.classList.add('active');
+}
+
+export function closeConsumptionPaymentModal() {
+    const modal = document.getElementById('modal-consumption-payment');
+    if (modal) modal.classList.remove('active');
+    _pendingPaymentModalData = null;
+}
+
+export async function confirmConsumptionPayment() {
+    if (!checkAdminAccess()) return;
+    if (!_pendingPaymentModalData || !_pendingPaymentModalData.ids.length) {
+        alert('Nenhum vale selecionado para confirmação.');
+        return;
+    }
+
+    const methodSelect = document.getElementById('modal-pay-method');
+    const paymentMethod = methodSelect ? methodSelect.value : 'DINHEIRO';
+
+    const dateInput = document.getElementById('modal-pay-date');
+    const paidAt = (dateInput && dateInput.value) 
+        ? new Date(dateInput.value).toISOString() 
+        : new Date().toISOString();
+
+    const notesInput = document.getElementById('modal-pay-notes');
+    const paymentNotes = notesInput ? notesInput.value.trim() : '';
+
+    const currentUser = _config.getCurrentUser();
+    const opId = currentUser ? currentUser.id : 'f20729';
+    const opName = currentUser ? `${currentUser.name} [${currentUser.code.toUpperCase()}]` : 'Luan [F20729]';
+
+    const count = _pendingPaymentModalData.ids.length;
+    const totalStr = formatCurrency(_pendingPaymentModalData.totalValue);
+    const benef = _pendingPaymentModalData.beneficiaryName;
+
+    try {
+        const { settleConsumptionPayment } = await import('../services/data-service.js');
+        await settleConsumptionPayment({
+            consumptionIds: _pendingPaymentModalData.ids,
+            paymentMethod,
+            paidAt,
+            operatorId: opId,
+            operatorName: opName,
+            paymentNotes
+        });
+
+        closeConsumptionPaymentModal();
+        alert(`✅ Pagamento confirmado com sucesso!\n\n${count} vale(s) de ${benef} (${totalStr}) quitado(s) via ${formatPaymentMethodLabel(paymentMethod)}.`);
+
+        await _config.syncWithSupabase(false);
+        _config.renderAll();
+    } catch (err) {
+        console.error('❌ Erro ao confirmar pagamento de vale:', err);
+        alert(`❌ Erro ao confirmar pagamento: ${err.message || err}`);
+    }
+}
+
+export async function undoConsumptionPayment(consumptionId) {
+    if (!checkAdminAccess()) return;
+
+    const reason = prompt('⚠️ Digite o motivo do estorno do pagamento (o vale voltará a constar como PENDENTE):', 'Recebimento lançado por engano');
+    if (!reason || !reason.trim()) return;
+
+    const currentUser = _config.getCurrentUser();
+    const opId = currentUser ? currentUser.id : 'f20729';
+    const opName = currentUser ? `${currentUser.name} [${currentUser.code.toUpperCase()}]` : 'Luan [F20729]';
+
+    try {
+        const { undoConsumptionPayment } = await import('../services/data-service.js');
+        await undoConsumptionPayment(consumptionId, reason.trim(), opId, opName);
+
+        alert('✅ Recebimento estornado com sucesso! O vale voltou para o status PENDENTE.');
+        await _config.syncWithSupabase(false);
+        _config.renderAll();
+    } catch (err) {
+        console.error('❌ Erro ao estornar pagamento:', err);
+        alert(`❌ Erro ao estornar pagamento: ${err.message || err}`);
+    }
+}
+
 // ── Filtros do Histórico ─────────────────────
 export function setConsumptionPeriodFilter(period) {
     _periodFilter = period;
@@ -240,6 +409,14 @@ export function setConsumptionTypeFilter(type) {
     _typeFilter = type;
     document.querySelectorAll('.cons-type-filter-pill').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-type') === type);
+    });
+    renderConsumptionModule();
+}
+
+export function setConsumptionPaymentFilter(status) {
+    _paymentFilter = status;
+    document.querySelectorAll('.cons-payment-pill').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-payment') === status);
     });
     renderConsumptionModule();
 }
@@ -264,16 +441,24 @@ export function exportConsumptionsCSV() {
         return;
     }
 
-    const headers = ['ID', 'Data', 'Tipo', 'Beneficiário', 'Produto', 'Qtd', 'Preço Unitário', 'Valor Total', 'Operador', 'Status', 'Observações'];
+    const headers = [
+        'ID', 'Data', 'Tipo', 'Beneficiário', 'Produto', 'Qtd', 
+        'Preço Unitário', 'Valor Total', 'Status Pgto', 'Meio Pgto', 
+        'Data Pgto', 'Recebido Por', 'Operador Baixa', 'Status Baixa', 'Observações'
+    ];
     const rows = consumptions.map(c => [
         c.id,
         c.fullDateTime || c.dateFormatted,
-        c.type === 'DIRETORIA' ? 'Sócios / Patrão' : (c.type === 'FUNCIONARIO' ? 'Vale / Folha' : 'Uso Interno'),
+        c.type === 'DIRETORIA' ? 'Sócios / Patrão' : (c.type === 'FUNCIONARIO' ? 'Vale Colaborador' : 'Uso Interno'),
         c.beneficiaryName,
         c.productName,
         c.qty,
         c.unitPrice.toFixed(2).replace('.', ','),
         c.totalValue.toFixed(2).replace('.', ','),
+        c.paymentStatus || '—',
+        c.paymentMethod ? formatPaymentMethodLabel(c.paymentMethod) : '—',
+        c.paidAt ? new Date(c.paidAt).toLocaleString('pt-BR') : '—',
+        c.paidOperatorName || '—',
         c.operatorName,
         c.status,
         c.notes || ''
@@ -317,6 +502,11 @@ function getFilteredConsumptions() {
         list = list.filter(c => c.type === _typeFilter);
     }
 
+    // Filtro de status de pagamento
+    if (_paymentFilter !== 'all') {
+        list = list.filter(c => c.paymentStatus === _paymentFilter);
+    }
+
     // Filtro de usuário/colaborador
     if (_userFilter !== 'all') {
         list = list.filter(c => c.beneficiaryUserId === _userFilter || c.beneficiaryName.toLowerCase().includes(_userFilter.toLowerCase()));
@@ -327,7 +517,8 @@ function getFilteredConsumptions() {
         list = list.filter(c => 
             c.beneficiaryName.toLowerCase().includes(_searchQuery) ||
             c.productName.toLowerCase().includes(_searchQuery) ||
-            (c.notes && c.notes.toLowerCase().includes(_searchQuery))
+            (c.notes && c.notes.toLowerCase().includes(_searchQuery)) ||
+            (c.paymentMethod && c.paymentMethod.toLowerCase().includes(_searchQuery))
         );
     }
 
@@ -343,7 +534,7 @@ export function renderConsumptionModule() {
     const currentUser = _config?.getCurrentUser();
     const isAdmin = currentUser && currentUser.role === ROLES.ADMIN;
 
-    // Se não for admin, não renderiza (a view permanece com seu HTML intacto e oculta via .admin-only)
+    // Se não for admin, não renderiza
     if (!isAdmin) {
         return;
     }
@@ -366,7 +557,8 @@ export function renderConsumptionModule() {
 
     let totalGeral = 0;
     let totalDiretoria = 0;
-    let totalFuncionarios = 0;
+    let totalValesPendentes = 0;
+    let totalValesPagos = 0;
     let totalItens = 0;
 
     activeConsumptions.forEach(c => {
@@ -375,21 +567,73 @@ export function renderConsumptionModule() {
         if (c.type === 'DIRETORIA') {
             totalDiretoria += c.totalValue;
         } else if (c.type === 'FUNCIONARIO') {
-            totalFuncionarios += c.totalValue;
+            if (c.paymentStatus === 'PAGO') {
+                totalValesPagos += c.totalValue;
+            } else {
+                totalValesPendentes += c.totalValue;
+            }
         }
     });
 
     const elTotalGeral = document.getElementById('cons-metric-total-geral');
     const elTotalDiretoria = document.getElementById('cons-metric-total-diretoria');
     const elTotalVales = document.getElementById('cons-metric-total-vales');
+    const elTotalValesPagos = document.getElementById('cons-metric-vales-pagos');
     const elTotalItens = document.getElementById('cons-metric-total-itens');
 
     if (elTotalGeral) elTotalGeral.innerText = formatCurrency(totalGeral);
     if (elTotalDiretoria) elTotalDiretoria.innerText = formatCurrency(totalDiretoria);
-    if (elTotalVales) elTotalVales.innerText = formatCurrency(totalFuncionarios);
+    if (elTotalVales) elTotalVales.innerText = formatCurrency(totalValesPendentes);
+    if (elTotalValesPagos) elTotalValesPagos.innerText = formatCurrency(totalValesPagos);
     if (elTotalItens) elTotalItens.innerText = `${totalItens} un`;
 
-    // 4. Renderizar Tabela do Histórico
+    // 4. Banner de Quitação em Lote Dinâmico
+    const pendingVales = activeConsumptions.filter(c => c.type === 'FUNCIONARIO' && c.paymentStatus === 'PENDENTE');
+    const bannerEl = document.getElementById('cons-batch-settle-banner');
+    if (bannerEl) {
+        if (pendingVales.length > 0) {
+            // Agrupar pendentes por colaborador
+            const byBeneficiary = {};
+            pendingVales.forEach(c => {
+                const name = c.beneficiaryName;
+                if (!byBeneficiary[name]) byBeneficiary[name] = { count: 0, total: 0 };
+                byBeneficiary[name].count += 1;
+                byBeneficiary[name].total += c.totalValue;
+            });
+
+            const buttonsHtml = Object.keys(byBeneficiary).map(name => {
+                const { count, total } = byBeneficiary[name];
+                return `
+                    <button class="btn btn-sm" style="background: #10b981; color: white; border: none; padding: 6px 12px; font-weight: 700; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;" 
+                        onclick="app.openBatchPaymentModal('${escapeHtml(name)}')">
+                        <span>💰</span> Quitar todos os ${count} vales de ${escapeHtml(name)} (${formatCurrency(total)})
+                    </button>
+                `;
+            }).join(' ');
+
+            bannerEl.style.display = 'block';
+            bannerEl.innerHTML = `
+                <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                    <div>
+                        <strong style="color: #065f46; font-size: 9.5pt; display: flex; align-items: center; gap: 6px;">
+                            <span>⚡</span> Quitação Rápida de Vales Pendentes:
+                        </strong>
+                        <span style="font-size: 8.5pt; color: #047857;">
+                            Clique para registrar o recebimento integral ou acerto salarial do colaborador.
+                        </span>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        ${buttonsHtml}
+                    </div>
+                </div>
+            `;
+        } else {
+            bannerEl.style.display = 'none';
+            bannerEl.innerHTML = '';
+        }
+    }
+
+    // 5. Renderizar Tabela do Histórico
     const tbody = document.getElementById('consumption-table-body');
     if (!tbody) return;
     tbody.innerHTML = '';
@@ -399,7 +643,7 @@ export function renderConsumptionModule() {
     if (filtered.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center" style="padding: 32px; color: #94a3b8;">
+                <td colspan="8" class="text-center" style="padding: 32px; color: #94a3b8;">
                     Nenhuma retirada ou vale encontrado com os filtros selecionados.
                 </td>
             </tr>
@@ -418,7 +662,7 @@ export function renderConsumptionModule() {
         if (item.type === 'DIRETORIA') {
             typeBadge = `<span class="badge-status" style="background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe;">👑 Sócios / Patrão</span>`;
         } else if (item.type === 'FUNCIONARIO') {
-            typeBadge = `<span class="badge-status" style="background: #fff7ed; color: #c2410c; border: 1px solid #fdba74;">👤 Vale / Folha</span>`;
+            typeBadge = `<span class="badge-status" style="background: #fff7ed; color: #c2410c; border: 1px solid #fdba74;">👤 Vale Colaborador</span>`;
         } else {
             typeBadge = `<span class="badge-status" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">🏢 Uso Interno</span>`;
         }
@@ -430,14 +674,61 @@ export function renderConsumptionModule() {
         const safeProduct = escapeHtml(item.productName);
         const safeNotes = escapeHtml(item.notes || '—');
 
+        // Status de Pagamento
+        let paymentBadge = '';
+        if (item.type === 'FUNCIONARIO') {
+            if (item.paymentStatus === 'PAGO') {
+                const paidDateStr = item.paidAt ? new Date(item.paidAt).toLocaleDateString('pt-BR') : '';
+                paymentBadge = `
+                    <span class="badge-status" style="background: #d1fae5; color: #047857; border: 1px solid #a7f3d0;" title="Recebido por ${escapeHtml(item.paidOperatorName || '')} via ${formatPaymentMethodLabel(item.paymentMethod)}">
+                        🟢 PAGO • ${formatPaymentMethodLabel(item.paymentMethod)}
+                    </span>
+                    <div style="font-size: 7pt; color: #059669; margin-top: 2px;">
+                        ${paidDateStr} ${item.paidOperatorName ? `• ${escapeHtml(item.paidOperatorName)}` : ''}
+                    </div>
+                `;
+            } else {
+                paymentBadge = `<span class="badge-status" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a;">🟡 PENDENTE</span>`;
+            }
+        } else {
+            paymentBadge = `<span style="color: #94a3b8; font-size: 8pt;">— Isento</span>`;
+        }
+
+        // Ações
         let actionsHtml = '—';
         if (item.status === 'ATIVO' && isAdmin) {
-            actionsHtml = `
-                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 8pt; color: #dc2626; border-color: #fca5a5;" 
-                    onclick="app.cancelConsumptionRecord('${item.id}')" title="Estornar baixa e devolver estoque">
-                    ↩️ Estornar
-                </button>
-            `;
+            if (item.type === 'FUNCIONARIO') {
+                if (item.paymentStatus === 'PENDENTE') {
+                    actionsHtml = `
+                        <div style="display: flex; gap: 4px; justify-content: flex-end;">
+                            <button class="btn btn-sm" style="padding: 4px 8px; font-size: 8pt; background: #10b981; border: none; color: white; border-radius: 4px; cursor: pointer; font-weight: 600;" 
+                                onclick="app.openConsumptionPaymentModal('${item.id}')" title="Confirmar recebimento / pagamento do vale">
+                                💰 Receber
+                            </button>
+                            <button class="btn btn-outline" style="padding: 4px 8px; font-size: 8pt; color: #dc2626; border-color: #fca5a5; border-radius: 4px;" 
+                                onclick="app.cancelConsumptionRecord('${item.id}')" title="Estornar baixa e devolver estoque">
+                                ↩️ Estornar
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    actionsHtml = `
+                        <div style="display: flex; gap: 4px; justify-content: flex-end;">
+                            <button class="btn btn-outline" style="padding: 4px 8px; font-size: 7.5pt; color: #d97706; border-color: #fde68a; border-radius: 4px;" 
+                                onclick="app.undoConsumptionPayment('${item.id}')" title="Desfazer quitação (voltar a constar como pendente)">
+                                ↩️ Desfazer Pgto
+                            </button>
+                        </div>
+                    `;
+                }
+            } else {
+                actionsHtml = `
+                    <button class="btn btn-outline" style="padding: 4px 8px; font-size: 8pt; color: #dc2626; border-color: #fca5a5; border-radius: 4px;" 
+                        onclick="app.cancelConsumptionRecord('${item.id}')" title="Estornar baixa e devolver estoque">
+                        ↩️ Estornar
+                    </button>
+                `;
+            }
         } else if (item.status === 'ESTORNADO') {
             actionsHtml = `<span style="font-size: 7.5pt; color: #94a3b8;">Estornado</span>`;
         }
@@ -458,6 +749,9 @@ export function renderConsumptionModule() {
             </td>
             <td style="font-weight: 700; color: #1e293b;">
                 ${formatCurrency(item.totalValue)}
+            </td>
+            <td>
+                ${paymentBadge}
             </td>
             <td style="font-size: 8pt; color: #64748b;">
                 ${escapeHtml(item.operatorName)}

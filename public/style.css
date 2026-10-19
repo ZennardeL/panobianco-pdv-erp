@@ -1836,4 +1836,23 @@ body {
     gap: 6px;
     flex-wrap: wrap;
 }
+.filter-pill {
+    padding: 4px 10px;
+    border-radius: 14px;
+    font-size: 8pt;
+    font-weight: 600;
+    background: #ffffff;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.filter-pill:hover {
+    background: #f1f5f9;
+}
+.filter-pill.active {
+    background: #ea580c;
+    color: #ffffff;
+    border-color: #ea580c;
+}
 

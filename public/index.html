@@ -457,8 +457,15 @@
                     <div class="sc-card">
                         <div class="sc-icon">👤</div>
                         <div class="sc-info">
-                            <span class="sc-title">Vales a Descontar</span>
+                            <span class="sc-title">Vales Pendentes</span>
                             <span class="sc-value" style="color: #ea580c;" id="cons-metric-total-vales">R$ 0,00</span>
+                        </div>
+                    </div>
+                    <div class="sc-card">
+                        <div class="sc-icon">✅</div>
+                        <div class="sc-info">
+                            <span class="sc-title">Vales Quitados</span>
+                            <span class="sc-value" style="color: #16a34a;" id="cons-metric-vales-pagos">R$ 0,00</span>
                         </div>
                     </div>
                     <div class="sc-card">
@@ -611,6 +618,12 @@
                                 <button class="filter-pill cons-type-filter-pill" data-type="DIRETORIA" onclick="app.setConsumptionTypeFilter('DIRETORIA')">👑 Sócios</button>
                                 <button class="filter-pill cons-type-filter-pill" data-type="FUNCIONARIO" onclick="app.setConsumptionTypeFilter('FUNCIONARIO')">👤 Vales</button>
                             </div>
+                            <div class="filter-pills-row" style="margin-top: 6px;">
+                                <span style="font-size: 8pt; font-weight: 700; color: #64748b;">PAGAMENTO:</span>
+                                <button class="filter-pill cons-payment-pill active" data-payment="all" onclick="app.setConsumptionPaymentFilter('all')">Todos</button>
+                                <button class="filter-pill cons-payment-pill" data-payment="PENDENTE" onclick="app.setConsumptionPaymentFilter('PENDENTE')">🟡 Pendentes</button>
+                                <button class="filter-pill cons-payment-pill" data-payment="PAGO" onclick="app.setConsumptionPaymentFilter('PAGO')">🟢 Quitados / Pagos</button>
+                            </div>
                             <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
                                 <select id="cons-filter-employee" class="form-control" style="flex: 1; min-width: 180px; font-size: 8.5pt;" onchange="app.setConsumptionUserFilter(this.value)">
                                     <option value="all">Todos os Colaboradores</option>
@@ -618,6 +631,9 @@
                                 <input type="text" class="form-control" style="flex: 1.5; min-width: 180px; font-size: 8.5pt;" placeholder="🔍 Buscar por nome, produto..." oninput="app.searchConsumptions(this.value)">
                             </div>
                         </div>
+
+                        <!-- Banner de Quitação em Lote Dinâmico -->
+                        <div id="cons-batch-settle-banner" style="display: none; margin-top: 12px;"></div>
 
                         <!-- Tabela de Registros -->
                         <div class="table-responsive" style="max-height: 480px; overflow-y: auto; margin-top: 12px;">
@@ -629,6 +645,7 @@
                                         <th>Beneficiário</th>
                                         <th>Produto & Qtd</th>
                                         <th>Valor Total</th>
+                                        <th>Pagamento</th>
                                         <th>Operador</th>
                                         <th class="text-right">Ação</th>
                                     </tr>
@@ -1246,6 +1263,68 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="app.closeDuplicatesModal()">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Confirmar Pagamento de Vale -->
+    <div id="modal-consumption-payment" class="modal-overlay">
+        <div class="modal-card" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3>💰 Confirmar Recebimento de Vale</h3>
+                <button class="close-btn" onclick="app.closeConsumptionPaymentModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Resumo do(s) Vale(s) -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 8pt; color: #64748b; font-weight: 700; text-transform: uppercase;">Colaborador</span>
+                        <strong id="modal-pay-beneficiary" style="font-size: 10.5pt; color: #0f172a;">—</strong>
+                    </div>
+                    <div style="font-size: 8.5pt; color: #475569; margin-bottom: 10px; line-height: 1.4;" id="modal-pay-items-summary">
+                        —
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+                        <span style="font-size: 9pt; font-weight: 700; color: #334155;">Total a Receber:</span>
+                        <span id="modal-pay-total-value" style="font-size: 16pt; font-weight: 800; color: #16a34a;">R$ 0,00</span>
+                    </div>
+                </div>
+
+                <!-- Forma de Pagamento -->
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label style="font-weight: 700; font-size: 9pt; color: #475569; display: block; margin-bottom: 6px;">
+                        FORMA DE PAGAMENTO RECEBIDA:
+                    </label>
+                    <select id="modal-pay-method" class="form-control" style="font-size: 9.5pt; font-weight: 600;">
+                        <option value="DINHEIRO">💵 Dinheiro (Espécie)</option>
+                        <option value="PIX">⚡ Pix</option>
+                        <option value="CARTAO_DEBITO">💳 Cartão de Débito</option>
+                        <option value="CARTAO_CREDITO">💳 Cartão de Crédito</option>
+                        <option value="FOLHA">📑 Desconto em Folha (Acerto Salarial)</option>
+                    </select>
+                </div>
+
+                <!-- Data do Pagamento -->
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label style="font-weight: 700; font-size: 9pt; color: #475569; display: block; margin-bottom: 6px;">
+                        DATA/HORA DO PAGAMENTO:
+                    </label>
+                    <input type="datetime-local" id="modal-pay-date" class="form-control" style="font-size: 9pt;">
+                </div>
+
+                <!-- Observação / Comprovante -->
+                <div class="form-group" style="margin-bottom: 8px;">
+                    <label style="font-weight: 700; font-size: 9pt; color: #475569; display: block; margin-bottom: 6px;">
+                        OBSERVAÇÕES (OPCIONAL):
+                    </label>
+                    <input type="text" id="modal-pay-notes" class="form-control" placeholder="Ex: Pago no balcão em mãos, comprovante no WhatsApp..." style="font-size: 9pt;">
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; gap: 8px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="app.closeConsumptionPaymentModal()">Cancelar</button>
+                <button class="btn btn-success" style="padding: 10px 18px; font-weight: 700; font-size: 10pt; background: #16a34a; border: none; color: white;" onclick="app.confirmConsumptionPayment()">
+                    ✅ Confirmar Recebimento
+                </button>
             </div>
         </div>
     </div>
