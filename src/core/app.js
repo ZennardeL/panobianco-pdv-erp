@@ -96,6 +96,7 @@ let authToken = sessionStorage.getItem('panobianco_token') || null;
 let useSupabase = false;
 let isOnline = true;
 let syncInterval = null;
+let stockAlertDismissed = false;
 
 
 // ════════════════════════════════════════════
@@ -277,9 +278,20 @@ function renderAll() {
     updateStockAlerts();
 }
 
+function dismissStockAlert() {
+    stockAlertDismissed = true;
+    const banner = document.getElementById('stock-alert-banner');
+    if (banner) banner.style.display = 'none';
+}
+
 function updateStockAlerts() {
     const banner = document.getElementById('stock-alert-banner');
     if (!banner) return;
+
+    if (stockAlertDismissed) {
+        banner.style.display = 'none';
+        return;
+    }
 
     const products = state.products || [];
     const outOfStock = products.filter(p => p.stock <= 0);
@@ -329,6 +341,7 @@ function backupDatabase() {
 
 function onLoginSuccess(user) {
     currentUser = user;
+    stockAlertDismissed = false;
     document.getElementById('login-modal').classList.remove('active');
 
     document.getElementById('current-user-avatar').innerText = user.avatar || (user.role === ROLES.ADMIN ? '💼' : '👤');
@@ -566,6 +579,7 @@ window.app = {
         navigate(viewId);
         renderAll();
     },
+    dismissStockAlert,
 
     // PDV / Carrinho
     filterCategory: (cat) => filterCategory(cat, renderAll),
