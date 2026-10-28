@@ -27,6 +27,7 @@ import { getClient, getTenantId } from './supabase-client.js';
 export async function getFullState(tenantId) {
     const client = getClient();
     const tid = tenantId || getTenantId();
+    const sixtyDaysAgoIso = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
 
     const [
         { data: products, error: prodErr },
@@ -39,9 +40,9 @@ export async function getFullState(tenantId) {
         client.from('products').select('*').eq('tenant_id', tid).order('name'),
         client.from('users').select('*').eq('tenant_id', tid).order('name'),
         client.from('counters').select('*').eq('tenant_id', tid),
-        client.from('shifts').select('*').eq('tenant_id', tid).order('created_at', { ascending: false }),
-        client.from('sales').select('*').eq('tenant_id', tid).order('created_at', { ascending: false }),
-        client.from('sale_items').select('*').eq('tenant_id', tid)
+        client.from('shifts').select('*').eq('tenant_id', tid).order('created_at', { ascending: false }).limit(60),
+        client.from('sales').select('*').eq('tenant_id', tid).gte('created_at', sixtyDaysAgoIso).order('created_at', { ascending: false }),
+        client.from('sale_items').select('sale_id, product_id, product_name, qty, unit_price, unit_cost').eq('tenant_id', tid).order('id', { ascending: false }).limit(1200)
     ]);
 
     if (prodErr) throw prodErr;

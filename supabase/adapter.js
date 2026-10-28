@@ -59,6 +59,9 @@ class SupabaseAdapter {
     async getFullState(tenantId = 'default') {
         if (!this.client) throw new Error('Supabase não conectado.');
 
+        // Otimização de Egress: sincroniza vendas/itens dos últimos 60 dias e os 60 turnos mais recentes
+        const sixtyDaysAgoIso = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+
         const [
             { data: products, error: prodErr },
             { data: users, error: userErr },
@@ -71,10 +74,10 @@ class SupabaseAdapter {
             this.client.from('products').select('*').eq('tenant_id', tenantId).order('name'),
             this.client.from('users').select('*').eq('tenant_id', tenantId).order('name'),
             this.client.from('counters').select('*').eq('tenant_id', tenantId),
-            this.client.from('shifts').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
-            this.client.from('sales').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
-            this.client.from('sale_items').select('*').eq('tenant_id', tenantId),
-            this.client.from('internal_consumptions').select('*').eq('tenant_id', tenantId).order('consumed_at', { ascending: false })
+            this.client.from('shifts').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(60),
+            this.client.from('sales').select('*').eq('tenant_id', tenantId).gte('created_at', sixtyDaysAgoIso).order('created_at', { ascending: false }),
+            this.client.from('sale_items').select('sale_id, product_id, product_name, qty, unit_price, unit_cost').eq('tenant_id', tenantId).order('id', { ascending: false }).limit(1200),
+            this.client.from('internal_consumptions').select('*').eq('tenant_id', tenantId).order('consumed_at', { ascending: false }).limit(300)
         ]);
 
         if (prodErr) throw prodErr;

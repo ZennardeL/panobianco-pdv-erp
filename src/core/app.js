@@ -200,7 +200,28 @@ function updateSyncBadge(online, isSupabaseMode = useSupabase) {
     }
 }
 
+let isSyncingSupabase = false;
+let pendingSyncAfterCurrent = false;
+let realtimeDebounceTimer = null;
+let needsSyncOnVisible = false;
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && needsSyncOnVisible && useSupabase) {
+        needsSyncOnVisible = false;
+        syncWithSupabase(false);
+    }
+});
+
 async function syncWithSupabase(showFeedback = true) {
+    if (realtimeDebounceTimer) {
+        clearTimeout(realtimeDebounceTimer);
+        realtimeDebounceTimer = null;
+    }
+    if (isSyncingSupabase) {
+        pendingSyncAfterCurrent = true;
+        return true;
+    }
+    isSyncingSupabase = true;
     try {
         const cloudState = await window.supabaseAdapter.getFullState();
         state = cloudState;
@@ -214,12 +235,25 @@ async function syncWithSupabase(showFeedback = true) {
         isOnline = false;
         updateSyncBadge(false, true);
         return false;
+    } finally {
+        isSyncingSupabase = false;
+        if (pendingSyncAfterCurrent) {
+            pendingSyncAfterCurrent = false;
+            realtimeDebounceTimer = setTimeout(() => syncWithSupabase(false), 600);
+        }
     }
 }
 
 function handleRealtimeUpdate(type, payload) {
-    console.log(`⚡ [Realtime Push Recebido: ${type}] Atualizando tela instantaneamente...`);
-    syncWithSupabase(false);
+    if (document.visibilityState === 'hidden') {
+        needsSyncOnVisible = true;
+        return;
+    }
+    if (realtimeDebounceTimer) clearTimeout(realtimeDebounceTimer);
+    realtimeDebounceTimer = setTimeout(() => {
+        console.log(`⚡ [Realtime Coalescido: ${type}] Sincronizando estado...`);
+        syncWithSupabase(false);
+    }, 800);
 }
 
 function startPolling() {
