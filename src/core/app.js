@@ -55,7 +55,9 @@ import {
 
 import {
     configureInventory, filterStockTable, detectDuplicateProducts,
-    renderStockTable, openRestockModal, confirmRestock, closeRestockModal
+    renderStockTable, openRestockModal, confirmRestock, closeRestockModal,
+    openShoppingListModal, closeShoppingListModal, setShoppingListScope,
+    toggleShoppingItem, updateShoppingItemQty, copyShoppingListWhatsApp, sendShoppingListWhatsApp
 } from '../modules/inventory.js';
 
 import {
@@ -78,7 +80,9 @@ import {
     submitConsumption, cancelConsumptionRecord, setConsumptionPeriodFilter,
     setConsumptionTypeFilter, setConsumptionPaymentFilter, setConsumptionUserFilter, searchConsumptions,
     exportConsumptionsCSV, openConsumptionPaymentModal, openBatchPaymentModal,
-    closeConsumptionPaymentModal, confirmConsumptionPayment, undoConsumptionPayment
+    closeConsumptionPaymentModal, confirmConsumptionPayment, undoConsumptionPayment,
+    openEmployeeStatementModal, closeEmployeeStatementModal, onStatementEmployeeChange,
+    setStatementScope, copyEmployeeStatementWhatsApp, sendEmployeeStatementWhatsApp, settleFromStatementModal
 } from '../modules/consumption.js';
 
 
@@ -682,6 +686,13 @@ window.app = {
     openRestockModal,
     confirmRestock,
     closeRestockModal,
+    openShoppingListModal,
+    closeShoppingListModal,
+    setShoppingListScope,
+    toggleShoppingItem,
+    updateShoppingItemQty,
+    copyShoppingListWhatsApp,
+    sendShoppingListWhatsApp,
 
     // Usuários
     openNewUserModal,
@@ -722,7 +733,14 @@ window.app = {
     openBatchPaymentModal,
     closeConsumptionPaymentModal,
     confirmConsumptionPayment,
-    undoConsumptionPayment
+    undoConsumptionPayment,
+    openEmployeeStatementModal,
+    closeEmployeeStatementModal,
+    onStatementEmployeeChange,
+    setStatementScope,
+    copyEmployeeStatementWhatsApp,
+    sendEmployeeStatementWhatsApp,
+    settleFromStatementModal
 };
 
 

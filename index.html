@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=3.4.2">
+    <link rel="stylesheet" href="style.css?v=3.4.3">
     <!-- Sentry Error Monitoring & Performance Tracking -->
     <script src="https://browser.sentry-cdn.com/8.54.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
     <script>
@@ -235,6 +235,9 @@
                         <p id="stock-view-desc">Consulta de saldos e personalização das fotos dos produtos</p>
                     </div>
                     <div class="header-actions admin-only">
+                        <button class="btn" style="background: #16a34a; color: white; border: none; font-weight: 700;" onclick="app.openShoppingListModal()" title="Gerar lista de compras e reposição com giro de vendas para enviar ao Patrão">
+                            📋 Lista de Compras (WhatsApp Patrão)
+                        </button>
                         <button class="btn btn-secondary" onclick="app.openDuplicatesModal()" title="Localizar e limpar produtos duplicados">
                             🧹 Limpar Duplicados
                         </button>
@@ -432,6 +435,9 @@
                         <p>Baixas de estoque para sócios/diretoria e vales para desconto em folha (sem impacto no caixa)</p>
                     </div>
                     <div class="header-actions">
+                        <button class="btn" style="background: #2563eb; color: white; border: none; font-weight: 700;" onclick="app.openEmployeeStatementModal()" title="Gerar extrato individual de energético, barrinhas e bebidas por colaborador para cobrar via WhatsApp">
+                            📲 Extrato p/ Colaborador (WhatsApp)
+                        </button>
                         <button class="btn btn-secondary" onclick="app.exportConsumptionsCSV()">
                             📥 Exportar CSV
                         </button>
@@ -1329,13 +1335,140 @@
         </div>
     </div>
 
+    
+    <!-- Modal: Lista de Compras Inteligente para o Patrão (WhatsApp) -->
+    <div id="shopping-list-modal" class="modal-overlay admin-only">
+        <div class="modal-card" style="max-width: 820px; width: 95%;">
+            <div class="modal-header">
+                <h3>📋 Lista de Compras & Reposição p/ o Patrão</h3>
+                <button class="close-btn" onclick="app.closeShoppingListModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 76vh; overflow-y: auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; background: #f8fafc; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                        <span style="font-size: 8.5pt; font-weight: 700; color: #475569;">FILTRAR ITENS:</span>
+                        <button id="btn-shop-scope-crit" class="btn btn-sm btn-primary" onclick="app.setShoppingListScope('critical')">
+                            🚨 Apenas Esgotados & Críticos
+                        </button>
+                        <button id="btn-shop-scope-all" class="btn btn-sm btn-secondary" onclick="app.setShoppingListScope('all_needed')">
+                            📈 Todos com Giro de Vendas
+                        </button>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="font-size: 8pt; color: #64748b; display: block;">Investimento Total Estimado:</span>
+                        <strong id="shopping-list-total-cost" style="font-size: 13pt; color: #16a34a;">R$ 0,00</strong>
+                        <small id="shopping-list-total-items" style="color: #475569; margin-left: 6px;">(0 produtos)</small>
+                    </div>
+                </div>
+
+                <div class="table-responsive" style="max-height: 260px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 14px;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px; text-align: center;">Incluir</th>
+                                <th>Produto & Giro Semanal</th>
+                                <th>Estoque Atual</th>
+                                <th>Qtd. a Comprar</th>
+                                <th>Custo Unit.</th>
+                                <th>Subtotal Est.</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shopping-list-tbody"></tbody>
+                    </table>
+                </div>
+
+                <div>
+                    <label style="font-weight: 700; font-size: 8.5pt; color: #475569; display: block; margin-bottom: 6px;">
+                        PRÉVIA DA MENSAGEM FORMATADA PARA O WHATSAPP DO PATRÃO:
+                    </label>
+                    <textarea id="shopping-list-wa-preview" class="form-control" rows="7" style="font-family: monospace; font-size: 8.5pt; background: #0f172a; color: #f8fafc; border-radius: 8px; padding: 10px;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-secondary" onclick="app.closeShoppingListModal()">Fechar</button>
+                <button class="btn btn-primary" onclick="app.copyShoppingListWhatsApp()">📋 Copiar Lista</button>
+                <button class="btn" style="background: #16a34a; color: white; border: none; font-weight: 700;" onclick="app.sendShoppingListWhatsApp()">
+                    📲 Enviar no WhatsApp
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Extrato Individual de Vales por Colaborador (Ex: Ygor) -->
+    <div id="modal-employee-statement" class="modal-overlay admin-only">
+        <div class="modal-card" style="max-width: 680px; width: 95%;">
+            <div class="modal-header">
+                <h3>📲 Extrato Individual de Vales & Consumo</h3>
+                <button class="close-btn" onclick="app.closeEmployeeStatementModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 76vh; overflow-y: auto;">
+                <div style="display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; margin-bottom: 14px; flex-wrap: wrap;">
+                    <div>
+                        <label style="font-weight: 700; font-size: 8.5pt; color: #475569; display: block; margin-bottom: 4px;">
+                            SELECIONE O COLABORADOR (EX: YGOR):
+                        </label>
+                        <select id="stmt-employee-select" class="form-control" style="font-weight: 700; font-size: 10pt;" onchange="app.onStatementEmployeeChange(this.value)"></select>
+                    </div>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button id="btn-stmt-scope-pend" class="btn btn-sm btn-primary" onclick="app.setStatementScope('pendente')">
+                            🟡 Só Pendentes (Cobrar)
+                        </button>
+                        <button id="btn-stmt-scope-mes" class="btn btn-sm btn-secondary" onclick="app.setStatementScope('mes')">
+                            📅 Mês Atual
+                        </button>
+                        <button id="btn-stmt-scope-all" class="btn btn-sm btn-secondary" onclick="app.setStatementScope('todos')">
+                            🌐 Tudo
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mini KPIs do Colaborador -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px;">
+                    <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 10px;">
+                        <span style="font-size: 7.5pt; font-weight: 700; color: #9a3412; display: block;">TOTAL PENDENTE A RECEBER</span>
+                        <strong id="stmt-kpi-pending" style="font-size: 13pt; color: #ea580c;">R$ 0,00</strong>
+                    </div>
+                    <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px;">
+                        <span style="font-size: 7.5pt; font-weight: 700; color: #065f46; display: block;">JÁ PAGO NO PERÍODO</span>
+                        <strong id="stmt-kpi-paid" style="font-size: 13pt; color: #16a34a;">R$ 0,00</strong>
+                    </div>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px;">
+                        <span style="font-size: 7.5pt; font-weight: 700; color: #475569; display: block;">ITENS NO EXTRATO</span>
+                        <strong id="stmt-kpi-count" style="font-size: 11pt; color: #0f172a;">0 retiradas</strong>
+                    </div>
+                </div>
+
+                <div>
+                    <label style="font-weight: 700; font-size: 8.5pt; color: #475569; display: block; margin-bottom: 6px;">
+                        EXTRATO DETALHADO (AGRUPADO POR PRODUTO + DATAS) PRONTO PARA WHATSAPP:
+                    </label>
+                    <textarea id="stmt-whatsapp-preview" class="form-control" rows="10" style="font-family: monospace; font-size: 8.5pt; background: #0f172a; color: #f8fafc; border-radius: 8px; padding: 12px;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <div>
+                    <button id="stmt-btn-settle-now" class="btn" style="background: #f59e0b; color: white; border: none; font-weight: 700; font-size: 9pt;" onclick="app.settleFromStatementModal()">
+                        💰 Quitar Pendentes Agora
+                    </button>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="btn btn-secondary" onclick="app.closeEmployeeStatementModal()">Fechar</button>
+                    <button class="btn btn-primary" onclick="app.copyEmployeeStatementWhatsApp()">📋 Copiar Extrato</button>
+                    <button class="btn" style="background: #16a34a; color: white; border: none; font-weight: 700;" onclick="app.sendEmployeeStatementWhatsApp()">
+                        📲 Enviar no WhatsApp
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ==================== ESPELHO DE FECHAMENTO PROFISSIONAL (PADRÃO EVO - IMPRESSÃO PRETO E BRANCO) ==================== -->
     <div id="evo-print-sheet" class="print-only"></div>
 
     <!-- Supabase JS Client (CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase/config.js?v=3.4.1"></script>
-    <script src="supabase/adapter.js?v=3.4.1"></script>
-    <script type="module" src="src/core/app.js?v=3.4.1"></script>
+    <script src="supabase/config.js?v=3.4.3"></script>
+    <script src="supabase/adapter.js?v=3.4.3"></script>
+    <script type="module" src="src/core/app.js?v=3.4.3"></script>
 </body>
 </html>

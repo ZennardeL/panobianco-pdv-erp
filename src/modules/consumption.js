@@ -604,10 +604,19 @@ export function renderConsumptionModule() {
             const buttonsHtml = Object.keys(byBeneficiary).map(name => {
                 const { count, total } = byBeneficiary[name];
                 return `
-                    <button class="btn btn-sm" style="background: #10b981; color: white; border: none; padding: 6px 12px; font-weight: 700; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;" 
-                        onclick="app.openBatchPaymentModal('${escapeHtml(name)}')">
-                        <span>💰</span> Quitar todos os ${count} vales de ${escapeHtml(name)} (${formatCurrency(total)})
-                    </button>
+                    <div style="display: inline-flex; align-items: center; gap: 6px; background: white; border: 1.5px solid #6ee7b7; border-radius: 8px; padding: 5px 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+                        <span style="font-size: 9pt; font-weight: 800; color: #064e3b; padding: 0 4px;">
+                            👤 ${escapeHtml(name)} <span style="color: #ea580c;">(${count}x • ${formatCurrency(total)})</span>
+                        </span>
+                        <button class="btn btn-sm" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #93c5fd; padding: 5px 10px; font-weight: 700; font-size: 8pt; border-radius: 6px; cursor: pointer;" 
+                            onclick="app.openEmployeeStatementModal('${escapeHtml(name)}')" title="Gerar extrato detalhado de energético/barrinhas para enviar ao colaborador no WhatsApp">
+                            📲 Extrato WhatsApp
+                        </button>
+                        <button class="btn btn-sm" style="background: #10b981; color: white; border: none; padding: 5px 10px; font-weight: 700; font-size: 8pt; border-radius: 6px; cursor: pointer;" 
+                            onclick="app.openBatchPaymentModal('${escapeHtml(name)}')" title="Dar baixa/quitar todos os vales pendentes deste colaborador">
+                            💰 Quitar Tudo
+                        </button>
+                    </div>
                 `;
             }).join(' ');
 
@@ -819,5 +828,192 @@ function populateEmployeeSelect(users) {
             filterSelect.appendChild(opt);
         });
         if (currentFilterVal) filterSelect.value = currentFilterVal;
+    }
+}
+
+// ── Extrato Individual de Vales por Colaborador (WhatsApp) ──
+
+let _statementEmployeeName = '';
+let _statementScope = 'pendente'; // 'pendente' | 'mes' | 'todos'
+
+function getAllEmployeeBeneficiaryNames() {
+    const state = _config?.getState() || {};
+    const namesSet = new Set();
+
+    (state.consumptions || []).forEach(c => {
+        if (c.status === 'ATIVO' && c.type === 'FUNCIONARIO' && c.beneficiaryName) {
+            namesSet.add(c.beneficiaryName.trim());
+        }
+    });
+
+    (state.users || []).forEach(u => {
+        if (u.active !== false && u.name) {
+            namesSet.add(u.name.trim());
+        }
+    });
+
+    return Array.from(namesSet).sort((a, b) => a.localeCompare(b));
+}
+
+export function openEmployeeStatementModal(beneficiaryName = '') {
+    if (!checkAdminAccess()) return;
+
+    const allNames = getAllEmployeeBeneficiaryNames();
+    const state = _config?.getState() || {};
+
+    // Se não informou nome, tentar pegar o colaborador filtrado ou o primeiro com vale pendente
+    if (!beneficiaryName) {
+        const firstPending = (state.consumptions || []).find(c => c.status === 'ATIVO' && c.type === 'FUNCIONARIO' && c.paymentStatus === 'PENDENTE');
+        beneficiaryName = firstPending ? firstPending.beneficiaryName : (allNames[0] || '');
+    }
+
+    _statementEmployeeName = beneficiaryName;
+    _statementScope = 'pendente';
+
+    renderEmployeeStatementModal();
+    const modal = document.getElementById('modal-employee-statement');
+    if (modal) modal.classList.add('active');
+}
+
+export function closeEmployeeStatementModal() {
+    const modal = document.getElementById('modal-employee-statement');
+    if (modal) modal.classList.remove('active');
+}
+
+export function onStatementEmployeeChange(name) {
+    _statementEmployeeName = name;
+    renderEmployeeStatementModal();
+}
+
+export function setStatementScope(scope) {
+    _statementScope = scope;
+    renderEmployeeStatementModal();
+}
+
+export function renderEmployeeStatementModal() {
+    const state = _config?.getState() || {};
+    const allNames = getAllEmployeeBeneficiaryNames();
+
+    const selectEl = document.getElementById('stmt-employee-select');
+    if (selectEl) {
+        selectEl.innerHTML = allNames.map(n => 
+            `<option value="${escapeHtml(n)}" ${n.toLowerCase() === (_statementEmployeeName || '').toLowerCase() ? 'selected' : ''}>${escapeHtml(n)}</option>`
+        ).join('');
+    }
+
+    const btnPend = document.getElementById('btn-stmt-scope-pend');
+    const btnMes = document.getElementById('btn-stmt-scope-mes');
+    const btnAll = document.getElementById('btn-stmt-scope-all');
+    if (btnPend) btnPend.className = `btn btn-sm ${_statementScope === 'pendente' ? 'btn-primary' : 'btn-secondary'}`;
+    if (btnMes) btnMes.className = `btn btn-sm ${_statementScope === 'mes' ? 'btn-primary' : 'btn-secondary'}`;
+    if (btnAll) btnAll.className = `btn btn-sm ${_statementScope === 'todos' ? 'btn-primary' : 'btn-secondary'}`;
+
+    const now = new Date();
+    const curMonth = now.getMonth();
+    const curYear = now.getFullYear();
+
+    const empItems = (state.consumptions || [])
+        .filter(c => c.status === 'ATIVO' && c.type === 'FUNCIONARIO' && c.beneficiaryName.toLowerCase() === (_statementEmployeeName || '').toLowerCase())
+        .filter(c => {
+            if (_statementScope === 'pendente') return c.paymentStatus === 'PENDENTE';
+            if (_statementScope === 'mes') {
+                const d = new Date(c.consumedAt);
+                return d.getMonth() === curMonth && d.getFullYear() === curYear;
+            }
+            return true;
+        })
+        .sort((a, b) => new Date(a.consumedAt).getTime() - new Date(b.consumedAt).getTime());
+
+    const pendingItems = empItems.filter(c => c.paymentStatus === 'PENDENTE');
+    const paidItems = empItems.filter(c => c.paymentStatus === 'PAGO');
+
+    const totalPending = pendingItems.reduce((s, c) => s + c.totalValue, 0);
+    const totalPaid = paidItems.reduce((s, c) => s + c.totalValue, 0);
+    const totalQty = empItems.reduce((s, c) => s + c.qty, 0);
+
+    // Agrupar resumo por produto (ex: 6x Monster Energy, 4x Barrinha)
+    const byProduct = {};
+    empItems.forEach(c => {
+        const key = c.productName;
+        if (!byProduct[key]) byProduct[key] = { name: key, qty: 0, total: 0 };
+        byProduct[key].qty += c.qty;
+        byProduct[key].total += c.totalValue;
+    });
+    const productSummaryList = Object.values(byProduct).sort((a, b) => b.qty - a.qty);
+
+    const kpiPendEl = document.getElementById('stmt-kpi-pending');
+    const kpiPaidEl = document.getElementById('stmt-kpi-paid');
+    const kpiCountEl = document.getElementById('stmt-kpi-count');
+    const settleBtn = document.getElementById('stmt-btn-settle-now');
+
+    if (kpiPendEl) kpiPendEl.textContent = formatCurrency(totalPending);
+    if (kpiPaidEl) kpiPaidEl.textContent = formatCurrency(totalPaid);
+    if (kpiCountEl) kpiCountEl.textContent = `${empItems.length} retiradas (${totalQty} un)`;
+    if (settleBtn) {
+        settleBtn.style.display = pendingItems.length > 0 ? 'inline-flex' : 'none';
+        settleBtn.textContent = `💰 Quitar ${pendingItems.length} Pendentes (${formatCurrency(totalPending)})`;
+    }
+
+    // Construir mensagem formatada para WhatsApp
+    const lines = [];
+    const scopeTitle = _statementScope === 'pendente' 
+        ? 'VALES PENDENTES DE ACERTO' 
+        : (_statementScope === 'mes' ? 'EXTRATO DO MÊS ATUAL' : 'EXTRATO COMPLETO DE CONSUMO');
+
+    lines.push(`🧾 *EXTRATO DE CONSUMO & VALES — PANOBIANCO*`);
+    lines.push(`👤 *Colaborador:* ${_statementEmployeeName || '—'}`);
+    lines.push(`📌 *Referência:* ${scopeTitle}`);
+    lines.push(`━━━━━━━━━━━━━━━━━━━━`);
+
+    if (empItems.length === 0) {
+        lines.push(`✅ Nenhum vale pendente registrado para ${_statementEmployeeName}.`);
+    } else {
+        lines.push(`\n📦 *RESUMO POR PRODUTO (${totalQty} itens):*`);
+        productSummaryList.forEach(p => {
+            lines.push(`• *${p.qty}x* ${p.name} — ${formatCurrency(p.total)}`);
+        });
+
+        lines.push(`\n📅 *DETALHAMENTO POR DATA:*`);
+        empItems.forEach(c => {
+            const dStr = c.dateFormatted || new Date(c.consumedAt).toLocaleDateString('pt-BR');
+            const tStr = c.timeFormatted || new Date(c.consumedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            const stIcon = c.paymentStatus === 'PAGO' ? '🟢 [PAGO]' : '🟡';
+            lines.push(`${stIcon} ${dStr} às ${tStr} • *${c.qty}x ${c.productName}* — ${formatCurrency(c.totalValue)}${c.notes ? ` _(${c.notes})_` : ''}`);
+        });
+
+        lines.push(`\n━━━━━━━━━━━━━━━━━━━━`);
+        if (totalPending > 0) {
+            lines.push(`💰 *TOTAL PENDENTE A PAGAR:* *${formatCurrency(totalPending)}*`);
+        }
+        if (totalPaid > 0 && _statementScope !== 'pendente') {
+            lines.push(`✅ *Total Já Quitado no Período:* ${formatCurrency(totalPaid)}`);
+        }
+    }
+
+    const previewEl = document.getElementById('stmt-whatsapp-preview');
+    if (previewEl) {
+        previewEl.value = lines.join('\n');
+    }
+}
+
+export function copyEmployeeStatementWhatsApp() {
+    const previewEl = document.getElementById('stmt-whatsapp-preview');
+    if (!previewEl || !previewEl.value) return;
+    navigator.clipboard.writeText(previewEl.value);
+    alert(`📋 Extrato de ${_statementEmployeeName} copiado! Agora é só colar no WhatsApp dele.`);
+}
+
+export function sendEmployeeStatementWhatsApp() {
+    const previewEl = document.getElementById('stmt-whatsapp-preview');
+    if (!previewEl || !previewEl.value) return;
+    const url = `https://wa.me/?text=${encodeURIComponent(previewEl.value)}`;
+    window.open(url, '_blank');
+}
+
+export function settleFromStatementModal() {
+    const name = _statementEmployeeName;
+    closeEmployeeStatementModal();
+    if (name) {
+        openBatchPaymentModal(name);
     }
 }
