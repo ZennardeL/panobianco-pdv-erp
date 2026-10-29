@@ -82,9 +82,13 @@ export async function finalizeSale(params) {
     // Camada 1: Supabase Cloud
     if (useSupabase) {
         try {
-            // Importação dinâmica evita dependência circular
-            const { processSale } = await import('../services/data-service.js');
-            const result = await processSale(salePayload);
+            let result;
+            if (window.supabaseAdapter && window.supabaseAdapter.isConnected) {
+                result = await window.supabaseAdapter.processSale(salePayload);
+            } else {
+                const { processSale } = await import('../services/data-service.js');
+                result = await processSale(salePayload);
+            }
             if (result && result.success) {
                 showSuccessModal(result.sale);
                 if (params.onSuccess) params.onSuccess(result.sale);

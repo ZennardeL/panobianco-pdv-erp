@@ -16,6 +16,7 @@ class SupabaseAdapter {
         this.config = null;
         this.channel = null;
         this.isConnected = false;
+        this._cachedUsers = null;
     }
 
     init(config = SUPABASE_CONFIG) {
@@ -59,8 +60,12 @@ class SupabaseAdapter {
     async getFullState(tenantId = 'default') {
         if (!this.client) throw new Error('Supabase não conectado.');
 
-        // Otimização de Egress: sincroniza vendas/itens dos últimos 60 dias e os 60 turnos mais recentes
+        // Otimização de Egress: sincroniza vendas/itens dos últimos 60 dias e usa cache em memória para usuários estáticos
         const sixtyDaysAgoIso = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+
+        const usersPromise = this._cachedUsers
+            ? Promise.resolve({ data: this._cachedUsers, error: null })
+            : this.client.from('users').select('*').eq('tenant_id', tenantId).order('name');
 
         const [
             { data: products, error: prodErr },
@@ -71,8 +76,8 @@ class SupabaseAdapter {
             { data: saleItems, error: itemErr },
             { data: consumptions, error: consErr }
         ] = await Promise.all([
-            this.client.from('products').select('*').eq('tenant_id', tenantId).order('name'),
-            this.client.from('users').select('*').eq('tenant_id', tenantId).order('name'),
+            this.client.from('products').select('id, name, category, cost, price, stock, min_stock, icon, image_path, active').eq('tenant_id', tenantId).order('name'),
+            usersPromise,
             this.client.from('counters').select('*').eq('tenant_id', tenantId),
             this.client.from('shifts').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(60),
             this.client.from('sales').select('*').eq('tenant_id', tenantId).gte('created_at', sixtyDaysAgoIso).order('created_at', { ascending: false }),
@@ -82,6 +87,7 @@ class SupabaseAdapter {
 
         if (prodErr) throw prodErr;
         if (userErr) throw userErr;
+        if (users && !this._cachedUsers) this._cachedUsers = users;
 
         // Mapear itens para cada venda
         const itemsBySale = {};
@@ -404,6 +410,7 @@ class SupabaseAdapter {
             .from('product-images')
             .upload(fileName, blob, {
                 contentType: 'image/jpeg',
+                cacheControl: '31536000',
                 upsert: true
             });
 
@@ -501,6 +508,7 @@ class SupabaseAdapter {
             .eq('tenant_id', tenantId);
 
         if (error) throw error;
+        this._cachedUsers = null;
 
         await this.client.from('audit_log').insert({
             tenant_id: tenantId,
@@ -574,13 +582,22 @@ class SupabaseAdapter {
         const { data: logs, error } = await query;
         if (error) throw error;
 
-        // Buscar tipos distintos de ação
-        const { data: actions } = await this.client
-            .from('audit_log')
-            .select('action')
-            .eq('tenant_id', tenantId);
-
-        const actionTypes = [...new Set((actions || []).map(a => a.action))].sort();
+        // Tipos de ação sem varrer toda a tabela audit_log
+        const defaultActions = [
+            'VENDA',
+            'CANCELAMENTO',
+            'REPOSICAO',
+            'FECHAMENTO_TURNO',
+            'PRODUTO_EXCLUIDO',
+            'FOTO_REMOVIDA',
+            'USUARIO_CRIADO',
+            'USUARIO_ATUALIZADO',
+            'USUARIO_EXCLUIDO',
+            'CONSUMO_INTERNO',
+            'CONSUMO_CANCELADO',
+            'CONSUMO_QUITADO'
+        ];
+        const actionTypes = [...new Set([...defaultActions, ...(logs || []).map(a => a.action).filter(Boolean)])].sort();
 
         return { logs: logs || [], actionTypes };
     }
@@ -708,6 +725,7 @@ class SupabaseAdapter {
             });
 
         if (error) throw error;
+        this._cachedUsers = null;
 
         await this.client.from('audit_log').insert({
             tenant_id: tenantId,
@@ -736,6 +754,7 @@ class SupabaseAdapter {
             .eq('code', codeToDel);
 
         if (error) throw error;
+        this._cachedUsers = null;
 
         await this.client.from('audit_log').insert({
             tenant_id: tenantId,
@@ -788,6 +807,7 @@ class SupabaseAdapter {
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'users', filter: `tenant_id=eq.${tenantId}` },
                 (payload) => {
+                    this._cachedUsers = null;
                     console.log('⚡ [Realtime] Usuário alterado:', payload);
                     if (onDataChanged) onDataChanged('user', payload);
                 }
