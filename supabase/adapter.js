@@ -604,11 +604,17 @@ class SupabaseAdapter {
         if (shiftErr && shiftErr.code !== 'PGRST116') throw shiftErr;
 
         // Buscar vendas do turno atual
-        const { data: shiftSales } = await this.client
+        let shiftSalesQuery = this.client
             .from('sales')
             .select('total, payment_method, status')
             .eq('tenant_id', tenantId)
             .eq('status', 'CONCLUIDA');
+
+        if (openShift && openShift.id) {
+            shiftSalesQuery = shiftSalesQuery.eq('shift_id', openShift.id);
+        }
+
+        const { data: shiftSales } = await shiftSalesQuery;
 
         let systemCash = 0;
         let totalRevenue = 0;

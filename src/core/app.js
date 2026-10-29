@@ -208,6 +208,7 @@ let isSyncingSupabase = false;
 let pendingSyncAfterCurrent = false;
 let realtimeDebounceTimer = null;
 let needsSyncOnVisible = false;
+let lastSyncCompletedAt = 0;
 
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && needsSyncOnVisible && useSupabase) {
@@ -231,6 +232,7 @@ async function syncWithSupabase(showFeedback = true) {
         state = cloudState;
         saveLocalState(cloudState);
         isOnline = true;
+        lastSyncCompletedAt = Date.now();
         updateSyncBadge(true, true);
         renderAll();
         return true;
@@ -253,8 +255,13 @@ function handleRealtimeUpdate(type, payload) {
         needsSyncOnVisible = true;
         return;
     }
+    // Evita "Double Sync" (eco do próprio WebSocket logo após uma ação local já ter sincronizado)
+    if (isSyncingSupabase || (Date.now() - lastSyncCompletedAt < 2500)) {
+        return;
+    }
     if (realtimeDebounceTimer) clearTimeout(realtimeDebounceTimer);
     realtimeDebounceTimer = setTimeout(() => {
+        if (Date.now() - lastSyncCompletedAt < 2000) return;
         console.log(`⚡ [Realtime Coalescido: ${type}] Sincronizando estado...`);
         syncWithSupabase(false);
     }, 800);
