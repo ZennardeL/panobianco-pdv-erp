@@ -12,8 +12,8 @@
  * @module modules/cart
  */
 
-import { escapeHtml, formatCurrency } from '../core/helpers.js';
-import { PAYMENT_METHODS, CATEGORY_GROUPS } from '../core/constants.js';
+import { escapeHtml, formatCurrency } from '../core/helpers.js?v=3.4.6';
+import { PAYMENT_METHODS, CATEGORY_GROUPS } from '../core/constants.js?v=3.4.6';
 
 // ────────────────────────────────────────────
 // Estado interno do módulo

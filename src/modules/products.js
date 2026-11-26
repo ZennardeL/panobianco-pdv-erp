@@ -6,8 +6,9 @@
  * @module modules/products
  */
 
-import { escapeHtml, generateLocalId } from '../core/helpers.js';
-import { CATEGORIES, CATEGORY_LABELS, getCategoryLabel, ROLES } from '../core/constants.js';
+import { escapeHtml, generateLocalId } from '../core/helpers.js?v=3.4.6';
+import { CATEGORIES, CATEGORY_LABELS, getCategoryLabel, ROLES } from '../core/constants.js?v=3.4.6';
+import { detectDuplicateProducts } from './inventory.js?v=3.4.6';
 
 // ── Private State ───────────────────────────
 let _config = null;
@@ -83,7 +84,7 @@ export function configureProducts(config) {
 
         if (_config.getUseSupabase()) {
             try {
-                const { uploadProductPhoto } = await import('../services/storage.js');
+                const { uploadProductPhoto } = await import('../services/storage.js?v=3.4.6');
 
                 await uploadProductPhoto(prodId, _tempQuickPhotoBase64);
                 alert('✅ Foto cadastrada e salva na Nuvem Supabase com sucesso!');
@@ -109,7 +110,6 @@ export function configureProducts(config) {
 
             if (res.ok) {
                 const data = await res.json();
-                _config.getState() = data.state;
                 _config.saveLocalState(data.state);
                 alert('✅ Foto cadastrada com sucesso em todas as máquinas!');
             }
@@ -137,7 +137,7 @@ export function configureProducts(config) {
 
         if (_config.getUseSupabase()) {
             try {
-                const { removeProductPhoto } = await import('../services/storage.js');
+                const { removeProductPhoto } = await import('../services/storage.js?v=3.4.6');
                 await removeProductPhoto(prodId, prod.name, opName);
                 alert('✅ Foto removida com sucesso no Supabase Cloud!');
                 await _config.syncWithSupabase(false);
@@ -159,7 +159,6 @@ export function configureProducts(config) {
 
             if (res.ok) {
                 const data = await res.json();
-                _config.getState() = data.state;
                 _config.saveLocalState(data.state);
                 alert('✅ Foto removida com sucesso!');
             }
@@ -327,12 +326,12 @@ export function configureProducts(config) {
             try {
                 let imageUrl = image;
                 if (_tempProductPhotoBase64 && _tempProductPhotoBase64.startsWith('data:')) {
-                    const { uploadProductPhoto } = await import('../services/storage.js');
+                    const { uploadProductPhoto } = await import('../services/storage.js?v=3.4.6');
 
                     imageUrl = await uploadProductPhoto(prodId, _tempProductPhotoBase64);
                 }
                 productPayload.image = imageUrl;
-                const { upsertProduct } = await import('../services/data-service.js');
+                const { upsertProduct } = await import('../services/data-service.js?v=3.4.6');
 
                 await upsertProduct(productPayload);
                 alert('✅ Produto salvo com sucesso no Supabase Cloud!');
@@ -354,7 +353,7 @@ export function configureProducts(config) {
             });
             if (res.ok) {
                 const data = await res.json();
-                _config.getState() = data.state;
+                _config.saveLocalState(data.state);
             }
         } catch (e) {
             if (id) {
@@ -400,7 +399,7 @@ export function configureProducts(config) {
 
         if (_config.getUseSupabase()) {
             try {
-                const { deleteProduct } = await import('../services/data-service.js');
+                const { deleteProduct } = await import('../services/data-service.js?v=3.4.6');
 
                 await deleteProduct(productId, productName, opName);
                 alert(`✅ Produto "${productName || productId}" excluído com sucesso do Supabase Cloud!`);
@@ -422,7 +421,6 @@ export function configureProducts(config) {
 
             if (res.ok) {
                 const data = await res.json();
-                _config.getState() = data.state;
                 _config.saveLocalState(data.state);
                 alert(`✅ Produto "${escapeHtml(productName)}" excluído com sucesso!`);
             } else {
@@ -538,10 +536,10 @@ export function configureProducts(config) {
         }
 
         if (_config.getUseSupabase()) {
-            const { upsertProduct } = await import('../services/data-service.js');
+            const { upsertProduct } = await import('../services/data-service.js?v=3.4.6');
 
             await upsertProduct(primary);
-            const { deleteProduct } = await import('../services/data-service.js');
+            const { deleteProduct } = await import('../services/data-service.js?v=3.4.6');
 
             await deleteProduct(duplicateId, duplicate.name, _config.getCurrentUser() ? _config.getCurrentUser().name : ROLES.ADMIN);
             await _config.syncWithSupabase(false);

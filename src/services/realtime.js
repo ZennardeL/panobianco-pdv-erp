@@ -10,8 +10,8 @@
  * @module services/realtime
  */
 
-import { getClientOrNull, getTenantId } from './supabase-client.js';
-import { debounce } from '../core/helpers.js';
+import { getClientOrNull, getTenantId } from './supabase-client.js?v=3.4.6';
+import { debounce } from '../core/helpers.js?v=3.4.6';
 
 /** @type {import('@supabase/supabase-js').RealtimeChannel | null} */
 let _channel = null;

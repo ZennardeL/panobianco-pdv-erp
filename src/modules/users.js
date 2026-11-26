@@ -6,8 +6,8 @@
  * @module modules/users
  */
 
-import { escapeHtml } from '../core/helpers.js';
-import { ROLES } from '../core/constants.js';
+import { escapeHtml } from '../core/helpers.js?v=3.4.6';
+import { ROLES } from '../core/constants.js?v=3.4.6';
 
 // ── Private State ───────────────────────────
 let _config = null;
@@ -95,7 +95,7 @@ export function configureUsers(config) {
 
         if (_config.getUseSupabase()) {
             try {
-                const { upsertUser } = await import('../services/data-service.js');
+                const { upsertUser } = await import('../services/data-service.js?v=3.4.6');
 
                 await upsertUser(userPayload, opName, originalCode);
                 alert(`✅ Colaborador ${name} (${code.toUpperCase()}) salvo no Supabase Cloud com sucesso!`);
@@ -118,7 +118,6 @@ export function configureUsers(config) {
             });
             if (res.ok) {
                 const data = await res.json();
-                _config.getState() = data.state;
                 _config.saveLocalState(data.state);
             }
         } catch (e) {
@@ -155,7 +154,7 @@ export function configureUsers(config) {
 
         if (_config.getUseSupabase()) {
             try {
-                const { deleteUser } = await import('../services/data-service.js');
+                const { deleteUser } = await import('../services/data-service.js?v=3.4.6');
 
                 await deleteUser(code, userName, opName);
                 alert(`🗑️ Colaborador ${userName} (${userCode.toUpperCase()}) excluído com sucesso!`);
@@ -175,7 +174,6 @@ export function configureUsers(config) {
             });
             if (res.ok) {
                 const data = await res.json();
-                _config.getState() = data.state;
                 _config.saveLocalState(data.state);
             }
         } catch (e) {

@@ -8,30 +8,30 @@
  */
 
 // ── Core ────────────────────────────────────
-import { escapeHtml } from './helpers.js';
-import { ROLES, ROLE_LABELS, ROLE_AVATARS, APP_VERSION } from './constants.js';
-import { initSupabase } from '../services/supabase-client.js';
+import { escapeHtml } from './helpers.js?v=3.4.6';
+import { ROLES, ROLE_LABELS, ROLE_AVATARS, APP_VERSION } from './constants.js?v=3.4.6';
+import { initSupabase } from '../services/supabase-client.js?v=3.4.6';
 
 // ── Módulos (Fases 3-7) ─────────────────────
 import {
     configureAuth, getCurrentUser, getAuthToken, isAdmin, isAuthenticated,
     showLoginModal, handleEmployeeLogin, logout, clearSession,
     restoreSession, applyLoginUI
-} from '../modules/auth.js';
+} from '../modules/auth.js?v=3.4.6';
 
-import { navigate } from '../modules/navigation.js';
+import { navigate } from '../modules/navigation.js?v=3.4.6';
 
 import {
     getCart, getSelectedPaymentMethod, getCartTotal, getCartCost, getCartQty,
     filterCategory, searchProducts, getFilteredProducts, renderProductsGrid,
     addToCart, updateCartQty, clearCart, resetCart, renderCart,
     selectPaymentMethod, calculateChange
-} from '../modules/cart.js';
+} from '../modules/cart.js?v=3.4.6';
 
 import {
     getLastSaleId, setLastSaleId, finalizeSale,
     showSuccessModal, closeSuccessModal, cancelLastSale
-} from '../modules/sales.js';
+} from '../modules/sales.js?v=3.4.6';
 
 import {
     configureShifts, setSlipsViewScope, toggleSlipsOrder, filterShiftSlips,
@@ -39,9 +39,9 @@ import {
     openShiftDetailsModal, renderShiftModalSalesTable, filterShiftModalSales,
     closeShiftDetailsModal, printCurrentModalShift, exportCurrentModalShiftCSV,
     showShiftClosedModal, closeShiftClosedModal, finishShiftAndGoToPDV
-} from '../modules/shifts.js';
+} from '../modules/shifts.js?v=3.4.6';
 
-import { configureReports, renderEvoPrintSheet, printCashReport } from '../modules/reports.js';
+import { configureReports, renderEvoPrintSheet, printCashReport } from '../modules/reports.js?v=3.4.6';
 
 import {
     configureProducts, openQuickPhotoModal, closeQuickPhotoModal,
@@ -51,28 +51,28 @@ import {
     deleteCurrentEditingProduct, deleteProductById,
     openDuplicatesModal, closeDuplicatesModal, renderDuplicatesList,
     deleteDuplicateItem, mergeDuplicateItem, closeProductModal
-} from '../modules/products.js';
+} from '../modules/products.js?v=3.4.6';
 
 import {
     configureInventory, filterStockTable, detectDuplicateProducts,
     renderStockTable, openRestockModal, confirmRestock, closeRestockModal,
     openShoppingListModal, closeShoppingListModal, setShoppingListScope,
     toggleShoppingItem, updateShoppingItemQty, copyShoppingListWhatsApp, sendShoppingListWhatsApp
-} from '../modules/inventory.js';
+} from '../modules/inventory.js?v=3.4.6';
 
 import {
     configureUsers, renderUsersTable, openNewUserModal, editUser,
     saveUser, deleteUser, closeUserModal
-} from '../modules/users.js';
+} from '../modules/users.js?v=3.4.6';
 
 import {
     configureAudit, renderAuditLogs, filterAudit,
     openCancelModal, closeCancelModal, confirmCancelSale,
     exportAuditLogs, switchAuditTab, loadAuditEvents,
     filterAuditEvents, renderAuditEvents, formatActionLabel, getActionBadge
-} from '../modules/audit.js';
+} from '../modules/audit.js?v=3.4.6';
 
-import { configureDashboard, renderDashboard, setDashEl } from '../modules/dashboard.js';
+import { configureDashboard, renderDashboard, setDashEl } from '../modules/dashboard.js?v=3.4.6';
 
 import {
     configureConsumption, renderConsumptionModule, setConsumptionType,
@@ -83,7 +83,7 @@ import {
     closeConsumptionPaymentModal, confirmConsumptionPayment, undoConsumptionPayment,
     openEmployeeStatementModal, closeEmployeeStatementModal, onStatementEmployeeChange,
     setStatementScope, copyEmployeeStatementWhatsApp, sendEmployeeStatementWhatsApp, settleFromStatementModal
-} from '../modules/consumption.js';
+} from '../modules/consumption.js?v=3.4.6';
 
 
 
@@ -96,7 +96,7 @@ const API_BASE = window.location.origin.includes('http') ? window.location.origi
 
 let state = loadLocalState();
 let currentUser = null;
-let authToken = sessionStorage.getItem('panobianco_token') || null;
+let authToken = safeSessionGet('panobianco_token') || null;
 let useSupabase = false;
 let isOnline = true;
 let syncInterval = null;
@@ -107,8 +107,37 @@ let stockAlertDismissed = false;
 // Funções de Infraestrutura (não modularizadas)
 // ════════════════════════════════════════════
 
+function safeLocalGet(key) {
+    try { return localStorage.getItem(key); } catch (e) { return null; }
+}
+
+function safeLocalSet(key, val) {
+    try {
+        localStorage.setItem(key, val);
+    } catch (e) {
+        try {
+            ['panobianco_pos_erp_v1', 'panobianco_pos_erp_v2', 'panobianco_pos_erp_v3', 'panobianco_pos_erp_v4', 'panobianco_state'].forEach(k => localStorage.removeItem(k));
+            localStorage.setItem(key, val);
+        } catch (e2) {
+            console.warn('⚠️ Limite do localStorage atingido, mantendo estado em memória:', e2);
+        }
+    }
+}
+
+function safeSessionGet(key) {
+    try { return sessionStorage.getItem(key); } catch (e) { return null; }
+}
+
+function safeSessionSet(key, val) {
+    try { sessionStorage.setItem(key, val); } catch (e) {}
+}
+
+function safeSessionRemove(key) {
+    try { sessionStorage.removeItem(key); } catch (e) {}
+}
+
 function loadLocalState() {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = safeLocalGet(STORAGE_KEY);
     if (saved) {
         try { return JSON.parse(saved); } catch (e) {}
     }
@@ -117,7 +146,7 @@ function loadLocalState() {
 
 function saveLocalState(data) {
     state = data;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    safeLocalSet(STORAGE_KEY, JSON.stringify(data));
 }
 
 function getDefaultSeedData() {
@@ -171,8 +200,8 @@ async function authFetch(url, options = {}) {
 function clearSessionLocal() {
     authToken = null;
     currentUser = null;
-    sessionStorage.removeItem('panobianco_token');
-    sessionStorage.removeItem('panobianco_user');
+    safeSessionRemove('panobianco_token');
+    safeSessionRemove('panobianco_user');
 }
 
 function updateSyncBadge(online, isSupabaseMode = useSupabase) {
@@ -438,11 +467,15 @@ async function handleLogin() {
     }
 
     if (useSupabase) {
-        const user = (state.users || []).find(u => u.code.toLowerCase() === codeInput);
-        if (user && user.active !== false) {
-            sessionStorage.setItem('panobianco_user', JSON.stringify(user));
-            onLoginSuccess(user);
+        let user = (state.users || []).find(u => u.code && u.code.toLowerCase() === codeInput);
+        if (!user) {
             await syncWithSupabase(false);
+            user = (state.users || []).find(u => u.code && u.code.toLowerCase() === codeInput);
+        }
+        if (user && user.active !== false) {
+            safeSessionSet('panobianco_user', JSON.stringify(user));
+            onLoginSuccess(user);
+            syncWithSupabase(false);
             return;
         } else {
             errorEl.innerText = '❌ Código de colaborador não encontrado no sistema!';
@@ -461,8 +494,8 @@ async function handleLogin() {
         if (res.ok) {
             const data = await res.json();
             authToken = data.token;
-            sessionStorage.setItem('panobianco_token', data.token);
-            sessionStorage.setItem('panobianco_user', JSON.stringify(data.user));
+            safeSessionSet('panobianco_token', data.token);
+            safeSessionSet('panobianco_user', JSON.stringify(data.user));
             onLoginSuccess(data.user);
             startPolling();
             await syncWithServer(false);
@@ -473,7 +506,7 @@ async function handleLogin() {
         }
     } catch (e) {
         // Fallback offline
-        const localUser = (state.users || []).find(u => u.code.toLowerCase() === codeInput);
+        const localUser = (state.users || []).find(u => u.code && u.code.toLowerCase() === codeInput);
         if (localUser) {
             onLoginSuccess(localUser);
             startPolling();
@@ -776,15 +809,15 @@ async function init() {
         // Also initialize the modular supabase-client for data-service.js
         initSupabase(window.SUPABASE_CONFIG);
         console.log('⚡ Modo Supabase Cloud Realtime Ativado.');
-        await syncWithSupabase(false);
+        const syncOk = await syncWithSupabase(false);
         window.supabaseAdapter.subscribeRealtime((type, payload) => handleRealtimeUpdate(type, payload));
-        updateSyncBadge(true, true);
+        updateSyncBadge(syncOk, true);
     } else {
         useSupabase = false;
     }
 
     // 2. Tentar recuperar sessão existente
-    const savedUser = sessionStorage.getItem('panobianco_user');
+    const savedUser = safeSessionGet('panobianco_user');
     if (savedUser) {
         try {
             const user = JSON.parse(savedUser);

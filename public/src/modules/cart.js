@@ -12,8 +12,8 @@
  * @module modules/cart
  */
 
-import { escapeHtml, formatCurrency } from '../core/helpers.js';
-import { PAYMENT_METHODS, CATEGORY_GROUPS } from '../core/constants.js';
+import { escapeHtml, formatCurrency } from '../core/helpers.js?v=3.4.6';
+import { PAYMENT_METHODS, CATEGORY_GROUPS } from '../core/constants.js?v=3.4.6';
 
 // ────────────────────────────────────────────
 // Estado interno do módulo
@@ -166,7 +166,7 @@ export function renderProductsGrid(products, saleCounter, onAddToCart) {
 
         const safeName = escapeHtml(prod.name);
         const mediaHtml = prod.image
-            ? `<div class="prod-card-media"><img src="${escapeHtml(prod.image)}" class="prod-card-photo" alt="${safeName}"></div>`
+            ? `<div class="prod-card-media"><img src="${escapeHtml(prod.image)}" class="prod-card-photo" alt="${safeName}" loading="lazy" decoding="async"></div>`
             : `<div class="prod-card-media"><span class="prod-card-icon">${prod.icon || '📦'}</span></div>`;
 
         card.innerHTML = `

@@ -30,7 +30,7 @@ export {
     generateLocalId,
     normalizeString,
     truncate
-} from './core/helpers.js';
+} from './core/helpers.js?v=3.4.6';
 
 export {
     ROLES,
@@ -49,7 +49,7 @@ export {
     CASH_DIFF_TOLERANCE,
     PHOTO_MAX_SIZE,
     APP_VERSION
-} from './core/constants.js';
+} from './core/constants.js?v=3.4.6';
 
 // ── Módulos de Domínio (Fase 3+) ────────────
 export {
@@ -64,11 +64,11 @@ export {
     clearSession,
     restoreSession,
     applyLoginUI
-} from './modules/auth.js';
+} from './modules/auth.js?v=3.4.6';
 
 export {
     navigate
-} from './modules/navigation.js';
+} from './modules/navigation.js?v=3.4.6';
 
 export {
     getCart,
@@ -87,7 +87,7 @@ export {
     renderCart,
     selectPaymentMethod,
     calculateChange
-} from './modules/cart.js';
+} from './modules/cart.js?v=3.4.6';
 
 export {
     getLastSaleId,
@@ -96,7 +96,7 @@ export {
     showSuccessModal,
     closeSuccessModal,
     cancelLastSale
-} from './modules/sales.js';
+} from './modules/sales.js?v=3.4.6';
 
 // ── Módulos de Domínio (Fase 5) ────────────
 export {
@@ -114,13 +114,13 @@ export {
     closeShiftDetailsModal,
     printCurrentModalShift,
     exportCurrentModalShiftCSV
-} from './modules/shifts.js';
+} from './modules/shifts.js?v=3.4.6';
 
 export {
     configureReports,
     renderEvoPrintSheet,
     printCashReport
-} from './modules/reports.js';
+} from './modules/reports.js?v=3.4.6';
 
 // ── Módulos de Domínio (Fase 6) ────────────
 export {
@@ -145,7 +145,7 @@ export {
     deleteDuplicateItem,
     mergeDuplicateItem,
     closeProductModal
-} from './modules/products.js';
+} from './modules/products.js?v=3.4.6';
 
 export {
     configureInventory,
@@ -155,7 +155,7 @@ export {
     openRestockModal,
     confirmRestock,
     closeRestockModal
-} from './modules/inventory.js';
+} from './modules/inventory.js?v=3.4.6';
 
 export {
     configureUsers,
@@ -165,7 +165,7 @@ export {
     saveUser,
     deleteUser,
     closeUserModal
-} from './modules/users.js';
+} from './modules/users.js?v=3.4.6';
 
 // ── Módulos de Domínio (Fase 7) ────────────
 export {
@@ -182,13 +182,13 @@ export {
     renderAuditEvents,
     formatActionLabel,
     getActionBadge
-} from './modules/audit.js';
+} from './modules/audit.js?v=3.4.6';
 
 export {
     configureDashboard,
     renderDashboard,
     setDashEl
-} from './modules/dashboard.js';
+} from './modules/dashboard.js?v=3.4.6';
 
 // ── Serviços (Fase 2) ───────────────────────
 export {
@@ -200,7 +200,7 @@ export {
     getTenantId,
     testConnection,
     destroyClient
-} from './services/supabase-client.js';
+} from './services/supabase-client.js?v=3.4.6';
 
 export {
     getFullState,
@@ -211,21 +211,21 @@ export {
     restockProduct,
     closeShift,
     upsertUser,
-    deleteUser,
+    deleteUser as deleteUserFromDb,
     insertAuditLog,
     getAuditLogs
-} from './services/data-service.js';
+} from './services/data-service.js?v=3.4.6';
 
 export {
     subscribe as subscribeRealtime,
     unsubscribe as unsubscribeRealtime,
     isSubscribed
-} from './services/realtime.js';
+} from './services/realtime.js?v=3.4.6';
 
 export {
     uploadProductPhoto,
     removeProductPhoto
-} from './services/storage.js';
+} from './services/storage.js?v=3.4.6';
 
 export {
     loadLocalState,
@@ -234,4 +234,4 @@ export {
     authFetch,
     executeWithFallback,
     syncState
-} from './services/sync.js';
+} from './services/sync.js?v=3.4.6';

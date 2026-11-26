@@ -6,8 +6,8 @@
  * @module modules/reports
  */
 
-import { escapeHtml } from '../core/helpers.js';
-import { SALE_STATUS, PAYMENT_METHODS } from '../core/constants.js';
+import { escapeHtml } from '../core/helpers.js?v=3.4.6';
+import { SALE_STATUS, PAYMENT_METHODS } from '../core/constants.js?v=3.4.6';
 
 // ── Private State ───────────────────────────
 let _config = null;

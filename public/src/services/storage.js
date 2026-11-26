@@ -7,8 +7,8 @@
  * @module services/storage
  */
 
-import { getClient, getTenantId } from './supabase-client.js';
-import { insertAuditLog } from './data-service.js';
+import { getClient, getTenantId } from './supabase-client.js?v=3.4.6';
+import { insertAuditLog } from './data-service.js?v=3.4.6';
 
 const BUCKET = 'product-images';
 

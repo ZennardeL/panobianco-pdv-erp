@@ -11,7 +11,7 @@
  * @module services/data-service
  */
 
-import { getClient, getTenantId } from './supabase-client.js';
+import { getClient, getTenantId } from './supabase-client.js?v=3.4.6';
 
 // ────────────────────────────────────────────
 // Estado Completo

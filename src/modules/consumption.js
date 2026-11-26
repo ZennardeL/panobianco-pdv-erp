@@ -12,8 +12,8 @@
  * @module modules/consumption
  */
 
-import { escapeHtml, formatCurrency, formatDateTime, sanitizeCsvField } from '../core/helpers.js';
-import { ROLES } from '../core/constants.js';
+import { escapeHtml, formatCurrency, formatDateTime, sanitizeCsvField } from '../core/helpers.js?v=3.4.6';
+import { ROLES } from '../core/constants.js?v=3.4.6';
 
 // ── Estado Privado ───────────────────────────
 let _config = null;
@@ -189,7 +189,7 @@ export async function submitConsumption() {
     if (!confirm(confirmMsg)) return;
 
     try {
-        const { createInternalConsumption } = await import('../services/data-service.js');
+        const { createInternalConsumption } = await import('../services/data-service.js?v=3.4.6');
         const res = await createInternalConsumption({
             type,
             beneficiaryName,
@@ -229,7 +229,7 @@ export async function cancelConsumptionRecord(consumptionId) {
     const opName = currentUser ? `${currentUser.name} [${currentUser.code.toUpperCase()}]` : 'Luan [F20729]';
 
     try {
-        const { cancelInternalConsumption } = await import('../services/data-service.js');
+        const { cancelInternalConsumption } = await import('../services/data-service.js?v=3.4.6');
         await cancelInternalConsumption(consumptionId, reason.trim(), opId, opName);
 
         alert('✅ Baixa estornada com sucesso! O estoque foi devolvido ao catálogo.');
@@ -352,7 +352,7 @@ export async function confirmConsumptionPayment() {
     const benef = _pendingPaymentModalData.beneficiaryName;
 
     try {
-        const { settleConsumptionPayment } = await import('../services/data-service.js');
+        const { settleConsumptionPayment } = await import('../services/data-service.js?v=3.4.6');
         await settleConsumptionPayment({
             consumptionIds: _pendingPaymentModalData.ids,
             paymentMethod,
@@ -384,7 +384,7 @@ export async function undoConsumptionPayment(consumptionId) {
     const opName = currentUser ? `${currentUser.name} [${currentUser.code.toUpperCase()}]` : 'Luan [F20729]';
 
     try {
-        const { undoConsumptionPayment } = await import('../services/data-service.js');
+        const { undoConsumptionPayment } = await import('../services/data-service.js?v=3.4.6');
         await undoConsumptionPayment(consumptionId, reason.trim(), opId, opName);
 
         alert('✅ Recebimento estornado com sucesso! O vale voltou para o status PENDENTE.');
