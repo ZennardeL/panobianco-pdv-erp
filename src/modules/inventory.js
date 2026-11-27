@@ -6,8 +6,8 @@
  * @module modules/inventory
  */
 
-import { escapeHtml, formatCurrency } from '../core/helpers.js?v=3.4.6';
-import { getCategoryLabel, ROLES } from '../core/constants.js?v=3.4.6';
+import { escapeHtml, formatCurrency } from '../core/helpers.js?v=3.5.0';
+import { getCategoryLabel, ROLES } from '../core/constants.js?v=3.5.0';
 
 // ── Private State ───────────────────────────
 let _config = null;
@@ -228,7 +228,7 @@ export async function confirmRestock() {
         try {
             const opId = _config.getCurrentUser() ? _config.getCurrentUser().id : 'f20729';
             const opName = _config.getCurrentUser() ? `${_config.getCurrentUser().name} [${_config.getCurrentUser().code.toUpperCase()}]` : 'Luan [F20729]';
-            const { restockProduct } = await import('../services/data-service.js?v=3.4.6');
+            const { restockProduct } = await import('../services/data-service.js?v=3.5.0');
 
             await restockProduct(id, qty, opId, opName);
             alert(`\u2705 Entrada de ${qty} unidades confirmada no Supabase Cloud!`);

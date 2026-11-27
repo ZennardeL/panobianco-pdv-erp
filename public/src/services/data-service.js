@@ -11,7 +11,7 @@
  * @module services/data-service
  */
 
-import { getClient, getTenantId } from './supabase-client.js?v=3.4.6';
+import { getClient, getTenantId } from './supabase-client.js?v=3.5.0';
 
 // ────────────────────────────────────────────
 // Estado Completo
@@ -120,7 +120,8 @@ export async function getFullState(tenantId) {
             role: u.role,
             title: u.title,
             avatar: u.avatar || '👤',
-            active: u.active
+            active: u.active,
+            preferences: u.preferences || null
         })),
         sales: formattedSales,
         activeShift,
@@ -590,6 +591,27 @@ export async function deleteUser(userCode, userName, operatorName, tenantId) {
         operatorName,
         details: `Colaborador ${userName || codeToDel} [${codeToDel.toUpperCase()}] foi excluído por ${operatorName}`
     });
+}
+
+/**
+ * Atualiza as preferências de tema/aparência de um colaborador.
+ * @param {string} userCode - Código/matrícula do colaborador
+ * @param {object} preferences - Objeto de preferências ({ mode, accent, customColor, updatedAt })
+ * @param {string} [tenantId] - ID do tenant
+ */
+export async function updateUserPreferences(userCode, preferences, tenantId) {
+    const client = getClient();
+    const tid = tenantId || getTenantId();
+    const code = String(userCode || '').toLowerCase();
+    if (!code) return;
+
+    const { error } = await client
+        .from('users')
+        .update({ preferences })
+        .eq('tenant_id', tid)
+        .eq('code', code);
+
+    if (error) throw error;
 }
 
 

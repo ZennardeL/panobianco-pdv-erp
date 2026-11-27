@@ -7,7 +7,7 @@
  * @module services/supabase-client
  */
 
-import { DEFAULT_TENANT_ID } from '../core/constants.js?v=3.4.6';
+import { DEFAULT_TENANT_ID } from '../core/constants.js?v=3.5.0';
 
 /** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let _client = null;

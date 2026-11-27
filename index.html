@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=3.4.6">
+    <link rel="stylesheet" href="style.css?v=3.5.0">
     <!-- Sentry Error Monitoring & Performance Tracking -->
     <script src="https://browser.sentry-cdn.com/8.54.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
     <script>
@@ -23,7 +23,7 @@
                 tracesSampleRate: 1.0,
                 tracePropagationTargets: ["localhost", "panobianco-pdv-erp.vercel.app", /^https:\/\/.*\.supabase\.co/],
                 environment: window.location.hostname.includes('vercel.app') ? 'production' : 'development',
-                release: 'panobianco-pdv@3.4.6'
+                release: 'panobianco-pdv@3.5.0'
             });
         }
     </script>
@@ -113,6 +113,9 @@
                         <span class="user-role" id="current-user-role">Recepção / Caixa</span>
                     </div>
                 </div>
+                <button class="theme-btn" onclick="app.openThemeModal()" title="Personalizar Cores e Tema">
+                    🎨 Tema
+                </button>
                 <button class="logout-btn" onclick="app.logout()" title="Trocar de Operador">
                     🚪 Trocar Usuário
                 </button>
@@ -1462,13 +1465,61 @@
         </div>
     </div>
 
+    <!-- Modal: Personalização de Aparência & Tema (Individual por Colaborador) -->
+    <div id="theme-modal" class="modal-overlay" onclick="if (event.target === this) app.closeThemeModal(true);">
+        <div class="modal-card" style="max-width: 560px; width: 95%;">
+            <div class="modal-header">
+                <div>
+                    <h3>🎨 Personalizar Aparência do PDV</h3>
+                    <small style="color: var(--text-muted); font-size: 8pt;">
+                        Salvo exclusivamente para: <strong id="theme-modal-user-label">Colaborador</strong>
+                    </small>
+                </div>
+                <button class="close-btn" onclick="app.closeThemeModal(true)">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 74vh; overflow-y: auto;">
+                <div style="margin-bottom: 16px;">
+                    <label style="font-size: 8pt; font-weight: 800; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 8px;">
+                        1. Estilo & Fundo da Tela (Claro, Escuro e Tons Suaves)
+                    </label>
+                    <div id="theme-modes-grid" class="theme-modes-grid"></div>
+                </div>
+
+                <div style="margin-bottom: 14px;">
+                    <label style="font-size: 8pt; font-weight: 800; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 8px;">
+                        2. Cor de Destaque (Botões, Abas e Preços)
+                    </label>
+                    <div id="theme-accents-grid" class="theme-accents-grid"></div>
+                </div>
+
+                <div class="theme-custom-row">
+                    <label for="theme-custom-color-input" style="font-size: 8.5pt; font-weight: 700; color: var(--text-main);">
+                        🖌️ Ou escolha qualquer cor personalizada:
+                    </label>
+                    <input type="color" id="theme-custom-color-input" value="#ea580c" oninput="app.selectCustomAccentColor(this.value)" style="width: 44px; height: 32px; border: 1.5px solid var(--border-color); border-radius: 6px; cursor: pointer; background: transparent; padding: 2px;">
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <button type="button" class="btn btn-secondary" onclick="app.resetDraftTheme()">
+                    ↺ Restaurar Padrão
+                </button>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" class="btn btn-secondary" onclick="app.closeThemeModal(true)">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="app.saveThemePreferences()">
+                        💾 Salvar Meu Tema
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ==================== ESPELHO DE FECHAMENTO PROFISSIONAL (PADRÃO EVO - IMPRESSÃO PRETO E BRANCO) ==================== -->
     <div id="evo-print-sheet" class="print-only"></div>
 
     <!-- Supabase JS Client (CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase/config.js?v=3.4.6"></script>
-    <script src="supabase/adapter.js?v=3.4.6"></script>
-    <script type="module" src="src/core/app.js?v=3.4.6"></script>
+    <script src="supabase/config.js?v=3.5.0"></script>
+    <script src="supabase/adapter.js?v=3.5.0"></script>
+    <script type="module" src="src/core/app.js?v=3.5.0"></script>
 </body>
 </html>

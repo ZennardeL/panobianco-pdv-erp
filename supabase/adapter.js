@@ -161,7 +161,8 @@ class SupabaseAdapter {
                 role: u.role,
                 title: u.title,
                 avatar: u.avatar || '👤',
-                active: u.active
+                active: u.active,
+                preferences: u.preferences || null
             })),
             sales: formattedSales,
             activeShift: activeShift,

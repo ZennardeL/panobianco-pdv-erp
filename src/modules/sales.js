@@ -11,8 +11,8 @@
  * @module modules/sales
  */
 
-import { escapeHtml, formatCurrency, formatTime } from '../core/helpers.js?v=3.4.6';
-import { SALE_STATUS } from '../core/constants.js?v=3.4.6';
+import { escapeHtml, formatCurrency, formatTime } from '../core/helpers.js?v=3.5.0';
+import { SALE_STATUS } from '../core/constants.js?v=3.5.0';
 
 // ────────────────────────────────────────────
 // Estado interno
@@ -86,7 +86,7 @@ export async function finalizeSale(params) {
             if (window.supabaseAdapter && window.supabaseAdapter.isConnected) {
                 result = await window.supabaseAdapter.processSale(salePayload);
             } else {
-                const { processSale } = await import('../services/data-service.js?v=3.4.6');
+                const { processSale } = await import('../services/data-service.js?v=3.5.0');
                 result = await processSale(salePayload);
             }
             if (result && result.success) {
@@ -243,7 +243,7 @@ export async function cancelLastSale(params) {
     // Camada 1: Supabase
     if (useSupabase) {
         try {
-            const { cancelSale } = await import('../services/data-service.js?v=3.4.6');
+            const { cancelSale } = await import('../services/data-service.js?v=3.5.0');
             const res = await cancelSale(_lastSaleId, opId, opName, reason, userIsAdmin);
             if (res && res.success) {
                 alert(`✅ Venda ${_lastSaleId} cancelada com sucesso!\nEstoque devolvido no Supabase Cloud.`);
@@ -263,7 +263,7 @@ export async function cancelLastSale(params) {
 
     // Camada 2: API local
     try {
-        const { authFetch } = await import('../services/sync.js?v=3.4.6');
+        const { authFetch } = await import('../services/sync.js?v=3.5.0');
         const res = await authFetch(`${apiBase}/api/sale/cancel`, {
             method: 'POST',
             body: JSON.stringify({

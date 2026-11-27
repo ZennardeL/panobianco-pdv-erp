@@ -6,8 +6,8 @@
  * @module modules/dashboard
  */
 
-import { escapeHtml, formatCurrency } from '../core/helpers.js?v=3.4.6';
-import { SALE_STATUS, PAYMENT_METHODS } from '../core/constants.js?v=3.4.6';
+import { escapeHtml, formatCurrency } from '../core/helpers.js?v=3.5.0';
+import { SALE_STATUS, PAYMENT_METHODS } from '../core/constants.js?v=3.5.0';
 
 // ── Private State ───────────────────────────
 let _config = null;

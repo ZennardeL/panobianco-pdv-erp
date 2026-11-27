@@ -6,8 +6,8 @@
  * @module modules/audit
  */
 
-import { escapeHtml, sanitizeCsvField, formatCurrency } from '../core/helpers.js?v=3.4.6';
-import { SALE_STATUS, ROLES } from '../core/constants.js?v=3.4.6';
+import { escapeHtml, sanitizeCsvField, formatCurrency } from '../core/helpers.js?v=3.5.0';
+import { SALE_STATUS, ROLES } from '../core/constants.js?v=3.5.0';
 
 // ── Private State ───────────────────────────
 let _config = null;
@@ -99,7 +99,7 @@ export async function confirmCancelSale() {
 
     if (_config.getUseSupabase()) {
         try {
-            const { cancelSale } = await import('../services/data-service.js?v=3.4.6');
+            const { cancelSale } = await import('../services/data-service.js?v=3.5.0');
             const opId = currentUser ? currentUser.id : 'f20729';
             const isAdmin = currentUser && currentUser.role === ROLES.ADMIN;
             const res = await cancelSale(saleId, opId, adminTitle, reason, isAdmin);
@@ -200,7 +200,7 @@ export async function loadAuditEvents() {
         const dateTo = dateToInput ? dateToInput.value : '';
 
         if (_config.getUseSupabase()) {
-            const { getAuditLogs } = await import('../services/data-service.js?v=3.4.6');
+            const { getAuditLogs } = await import('../services/data-service.js?v=3.5.0');
             const data = await getAuditLogs({ search, action, dateFrom, dateTo });
             _auditEvents = data.logs || [];
             const select = document.getElementById('audit-action-filter');

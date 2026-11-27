@@ -13,8 +13,8 @@
  * @module modules/auth
  */
 
-import { ROLES, ROLE_LABELS, ROLE_AVATARS } from '../core/constants.js?v=3.4.6';
-import { escapeHtml } from '../core/helpers.js?v=3.4.6';
+import { ROLES, ROLE_LABELS, ROLE_AVATARS } from '../core/constants.js?v=3.5.0';
+import { escapeHtml } from '../core/helpers.js?v=3.5.0';
 
 // ────────────────────────────────────────────
 // Estado interno do módulo

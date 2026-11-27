@@ -6,9 +6,9 @@
  * @module modules/products
  */
 
-import { escapeHtml, generateLocalId } from '../core/helpers.js?v=3.4.6';
-import { CATEGORIES, CATEGORY_LABELS, getCategoryLabel, ROLES } from '../core/constants.js?v=3.4.6';
-import { detectDuplicateProducts } from './inventory.js?v=3.4.6';
+import { escapeHtml, generateLocalId } from '../core/helpers.js?v=3.5.0';
+import { CATEGORIES, CATEGORY_LABELS, getCategoryLabel, ROLES } from '../core/constants.js?v=3.5.0';
+import { detectDuplicateProducts } from './inventory.js?v=3.5.0';
 
 // ── Private State ───────────────────────────
 let _config = null;
@@ -84,7 +84,7 @@ export function configureProducts(config) {
 
         if (_config.getUseSupabase()) {
             try {
-                const { uploadProductPhoto } = await import('../services/storage.js?v=3.4.6');
+                const { uploadProductPhoto } = await import('../services/storage.js?v=3.5.0');
 
                 await uploadProductPhoto(prodId, _tempQuickPhotoBase64);
                 alert('✅ Foto cadastrada e salva na Nuvem Supabase com sucesso!');
@@ -137,7 +137,7 @@ export function configureProducts(config) {
 
         if (_config.getUseSupabase()) {
             try {
-                const { removeProductPhoto } = await import('../services/storage.js?v=3.4.6');
+                const { removeProductPhoto } = await import('../services/storage.js?v=3.5.0');
                 await removeProductPhoto(prodId, prod.name, opName);
                 alert('✅ Foto removida com sucesso no Supabase Cloud!');
                 await _config.syncWithSupabase(false);
@@ -326,12 +326,12 @@ export function configureProducts(config) {
             try {
                 let imageUrl = image;
                 if (_tempProductPhotoBase64 && _tempProductPhotoBase64.startsWith('data:')) {
-                    const { uploadProductPhoto } = await import('../services/storage.js?v=3.4.6');
+                    const { uploadProductPhoto } = await import('../services/storage.js?v=3.5.0');
 
                     imageUrl = await uploadProductPhoto(prodId, _tempProductPhotoBase64);
                 }
                 productPayload.image = imageUrl;
-                const { upsertProduct } = await import('../services/data-service.js?v=3.4.6');
+                const { upsertProduct } = await import('../services/data-service.js?v=3.5.0');
 
                 await upsertProduct(productPayload);
                 alert('✅ Produto salvo com sucesso no Supabase Cloud!');
@@ -399,7 +399,7 @@ export function configureProducts(config) {
 
         if (_config.getUseSupabase()) {
             try {
-                const { deleteProduct } = await import('../services/data-service.js?v=3.4.6');
+                const { deleteProduct } = await import('../services/data-service.js?v=3.5.0');
 
                 await deleteProduct(productId, productName, opName);
                 alert(`✅ Produto "${productName || productId}" excluído com sucesso do Supabase Cloud!`);
@@ -536,10 +536,10 @@ export function configureProducts(config) {
         }
 
         if (_config.getUseSupabase()) {
-            const { upsertProduct } = await import('../services/data-service.js?v=3.4.6');
+            const { upsertProduct } = await import('../services/data-service.js?v=3.5.0');
 
             await upsertProduct(primary);
-            const { deleteProduct } = await import('../services/data-service.js?v=3.4.6');
+            const { deleteProduct } = await import('../services/data-service.js?v=3.5.0');
 
             await deleteProduct(duplicateId, duplicate.name, _config.getCurrentUser() ? _config.getCurrentUser().name : ROLES.ADMIN);
             await _config.syncWithSupabase(false);

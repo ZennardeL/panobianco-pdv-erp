@@ -7,8 +7,8 @@
  * @module modules/shifts
  */
 
-import { escapeHtml, formatCurrency, sanitizeCsvField } from '../core/helpers.js?v=3.4.6';
-import { SALE_STATUS, SHIFT_STATUS, PAYMENT_METHODS, CASH_DIFF_TOLERANCE } from '../core/constants.js?v=3.4.6';
+import { escapeHtml, formatCurrency, sanitizeCsvField } from '../core/helpers.js?v=3.5.0';
+import { SALE_STATUS, SHIFT_STATUS, PAYMENT_METHODS, CASH_DIFF_TOLERANCE } from '../core/constants.js?v=3.5.0';
 
 // ── Private State ───────────────────────────
 let _config = null;
@@ -259,7 +259,7 @@ export async function reconcileShift() {
     if (useSupabase) {
         try {
             const opId = currentUser ? currentUser.id : 'f20729';
-            const { closeShift } = await import('../services/data-service.js?v=3.4.6');
+            const { closeShift } = await import('../services/data-service.js?v=3.5.0');
             const res = await closeShift(countedCash, opId, opName);
             
             await _config.syncWithSupabase(false);

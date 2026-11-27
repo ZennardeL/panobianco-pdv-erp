@@ -8,30 +8,30 @@
  */
 
 // ── Core ────────────────────────────────────
-import { escapeHtml } from './helpers.js?v=3.4.6';
-import { ROLES, ROLE_LABELS, ROLE_AVATARS, APP_VERSION } from './constants.js?v=3.4.6';
-import { initSupabase } from '../services/supabase-client.js?v=3.4.6';
+import { escapeHtml } from './helpers.js?v=3.5.0';
+import { ROLES, ROLE_LABELS, ROLE_AVATARS, APP_VERSION } from './constants.js?v=3.5.0';
+import { initSupabase } from '../services/supabase-client.js?v=3.5.0';
 
 // ── Módulos (Fases 3-7) ─────────────────────
 import {
     configureAuth, getCurrentUser, getAuthToken, isAdmin, isAuthenticated,
     showLoginModal, handleEmployeeLogin, logout, clearSession,
     restoreSession, applyLoginUI
-} from '../modules/auth.js?v=3.4.6';
+} from '../modules/auth.js?v=3.5.0';
 
-import { navigate } from '../modules/navigation.js?v=3.4.6';
+import { navigate } from '../modules/navigation.js?v=3.5.0';
 
 import {
     getCart, getSelectedPaymentMethod, getCartTotal, getCartCost, getCartQty,
     filterCategory, searchProducts, getFilteredProducts, renderProductsGrid,
     addToCart, updateCartQty, clearCart, resetCart, renderCart,
     selectPaymentMethod, calculateChange
-} from '../modules/cart.js?v=3.4.6';
+} from '../modules/cart.js?v=3.5.0';
 
 import {
     getLastSaleId, setLastSaleId, finalizeSale,
     showSuccessModal, closeSuccessModal, cancelLastSale
-} from '../modules/sales.js?v=3.4.6';
+} from '../modules/sales.js?v=3.5.0';
 
 import {
     configureShifts, setSlipsViewScope, toggleSlipsOrder, filterShiftSlips,
@@ -39,9 +39,9 @@ import {
     openShiftDetailsModal, renderShiftModalSalesTable, filterShiftModalSales,
     closeShiftDetailsModal, printCurrentModalShift, exportCurrentModalShiftCSV,
     showShiftClosedModal, closeShiftClosedModal, finishShiftAndGoToPDV
-} from '../modules/shifts.js?v=3.4.6';
+} from '../modules/shifts.js?v=3.5.0';
 
-import { configureReports, renderEvoPrintSheet, printCashReport } from '../modules/reports.js?v=3.4.6';
+import { configureReports, renderEvoPrintSheet, printCashReport } from '../modules/reports.js?v=3.5.0';
 
 import {
     configureProducts, openQuickPhotoModal, closeQuickPhotoModal,
@@ -51,28 +51,28 @@ import {
     deleteCurrentEditingProduct, deleteProductById,
     openDuplicatesModal, closeDuplicatesModal, renderDuplicatesList,
     deleteDuplicateItem, mergeDuplicateItem, closeProductModal
-} from '../modules/products.js?v=3.4.6';
+} from '../modules/products.js?v=3.5.0';
 
 import {
     configureInventory, filterStockTable, detectDuplicateProducts,
     renderStockTable, openRestockModal, confirmRestock, closeRestockModal,
     openShoppingListModal, closeShoppingListModal, setShoppingListScope,
     toggleShoppingItem, updateShoppingItemQty, copyShoppingListWhatsApp, sendShoppingListWhatsApp
-} from '../modules/inventory.js?v=3.4.6';
+} from '../modules/inventory.js?v=3.5.0';
 
 import {
     configureUsers, renderUsersTable, openNewUserModal, editUser,
     saveUser, deleteUser, closeUserModal
-} from '../modules/users.js?v=3.4.6';
+} from '../modules/users.js?v=3.5.0';
 
 import {
     configureAudit, renderAuditLogs, filterAudit,
     openCancelModal, closeCancelModal, confirmCancelSale,
     exportAuditLogs, switchAuditTab, loadAuditEvents,
     filterAuditEvents, renderAuditEvents, formatActionLabel, getActionBadge
-} from '../modules/audit.js?v=3.4.6';
+} from '../modules/audit.js?v=3.5.0';
 
-import { configureDashboard, renderDashboard, setDashEl } from '../modules/dashboard.js?v=3.4.6';
+import { configureDashboard, renderDashboard, setDashEl } from '../modules/dashboard.js?v=3.5.0';
 
 import {
     configureConsumption, renderConsumptionModule, setConsumptionType,
@@ -83,7 +83,13 @@ import {
     closeConsumptionPaymentModal, confirmConsumptionPayment, undoConsumptionPayment,
     openEmployeeStatementModal, closeEmployeeStatementModal, onStatementEmployeeChange,
     setStatementScope, copyEmployeeStatementWhatsApp, sendEmployeeStatementWhatsApp, settleFromStatementModal
-} from '../modules/consumption.js?v=3.4.6';
+} from '../modules/consumption.js?v=3.5.0';
+
+import {
+    configureTheme, loadUserTheme, resetThemeToDefault,
+    openThemeModal, closeThemeModal, selectThemeMode,
+    selectAccentColor, selectCustomAccentColor, resetDraftTheme, saveThemePreferences
+} from '../modules/theme.js?v=3.5.0';
 
 
 
@@ -446,6 +452,7 @@ function onLoginSuccess(user) {
     }
 
     navigate('pdv');
+    loadUserTheme(user);
 
     if (typeof Sentry !== 'undefined') {
         Sentry.setUser({
@@ -532,6 +539,7 @@ async function handleLogout() {
     if (syncInterval) clearInterval(syncInterval);
     clearSessionLocal();
     clearCart();
+    resetThemeToDefault();
     showLoginModal();
 }
 
@@ -639,6 +647,7 @@ configureUsers(sharedConfig);
 configureAudit(sharedConfig);
 configureDashboard({ getState: () => state });
 configureConsumption(sharedConfig);
+configureTheme(sharedConfig);
 
 
 // ════════════════════════════════════════════
@@ -780,7 +789,16 @@ window.app = {
     setStatementScope,
     copyEmployeeStatementWhatsApp,
     sendEmployeeStatementWhatsApp,
-    settleFromStatementModal
+    settleFromStatementModal,
+
+    // Personalização & Temas (por colaborador)
+    openThemeModal,
+    closeThemeModal,
+    selectThemeMode,
+    selectAccentColor,
+    selectCustomAccentColor,
+    resetDraftTheme,
+    saveThemePreferences
 };
 
 
